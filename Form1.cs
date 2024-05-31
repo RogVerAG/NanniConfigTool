@@ -37,7 +37,6 @@ namespace Nanni_ScreenConfigurator
         {
             InitializeComponent();
             InitializeKvaserInterface();
-
         }
 
         private void InitializeKvaserInterface()
@@ -62,6 +61,7 @@ namespace Nanni_ScreenConfigurator
 
         private void bt_Refresh_Click(object sender, EventArgs e)
         {
+            DisplayWaitCursor();
             OL43List.Clear();
             cb_Display.Items.Clear();
             DeviceListRequest();
@@ -81,10 +81,20 @@ namespace Nanni_ScreenConfigurator
             }
         }
 
+        private void DisplayWaitCursor()
+        {
+            //Cursor.Current = Cursors.WaitCursor;
+            this.UseWaitCursor = true;
+
+            tmr_GuiDelays.Enabled = true;
+            tmr_GuiDelays.Start();
+        }
+
+
         private void DeviceListRequest()
         {
             can.Request_DeviceListUpdate();
-            tmr_WaitForDevices.Interval = 100;
+            tmr_WaitForDevices.Interval = 750;
             tmr_WaitForDevices.Enabled = true;
             tmr_WaitForDevices.Start();
         }
@@ -144,7 +154,7 @@ namespace Nanni_ScreenConfigurator
             CurrentTargetAdr = Convert.ToInt16(SelectedDisplay.Substring(2, 2), 16);
             SendingState = SendingStates.ENABLE_UDS;
             can.setCanState(4);     // state 4 = NanniConfigSending
-            TimeoutCounter = 100;    
+            TimeoutCounter = 100;
             tmr_SendConfigStateMachine.Enabled = true;
             tmr_SendConfigStateMachine.Start();
         }
@@ -166,52 +176,66 @@ namespace Nanni_ScreenConfigurator
                     Debug.WriteLine(" --- Reached State 1: Enable UDS ---");
                     //GetCtrlVal(panel, PANEL_RNG_DEVICE, &ucSrcAddr);          // !! What is this doing ??? !!!!
                     bool Result = can.EnableUds(CurrentTargetAdr);
-                    if(Result == false)
+                    if (Result == false)
                     {
                         MessageBox.Show("CAN Error", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
                     SendingState = SendingStates.EXTEND_DIAG_SESSION;
+                    progressBar.PerformStep();
                     break;
 
                 case SendingStates.EXTEND_DIAG_SESSION:
                     Debug.WriteLine(" --- Reached State 2: Extend Diag Session ---");
                     bool r1 = can.ExtendDiagSession();
-                    if(r1 == false)
+                    if (r1 == false)
                     {
                         Debug.WriteLine("CAN ERROR");
                     }
                     SendingState = SendingStates.WAIT_UDS_EXTEND;
+                    progressBar.PerformStep();
                     break;
 
                 case SendingStates.WAIT_UDS_EXTEND:
                     Debug.WriteLine(" --- Reached State 3: Wait for ExtendDiag Answer ---");
                     bool Ackn_ExtDiagSession = can.getExtDiagAnswer();
-                    if(Ackn_ExtDiagSession)
+                    if (Ackn_ExtDiagSession)
                     {
                         SendingState = SendingStates.SEND_START_FRAME;
                     }
+                    progressBar.PerformStep();
                     break;
 
                 case SendingStates.SEND_START_FRAME:
                     Debug.WriteLine(" --- Reached State 4: Sending start frame ---");
-                    can.SendScreenConfigStartFrame( ScreenConfigs.getConfig_StartingFrame(CurrentConfigNr) );
+                    bool r2 = can.SendScreenConfigStartFrame(ScreenConfigs.getConfig_StartingFrame(CurrentConfigNr));
+                    if (r2 == false)
+                    {
+                        Debug.WriteLine("Error at state 4");
+                    }
                     SendingState = SendingStates.WAIT_START_FRAME_ANSWER;
+                    progressBar.PerformStep();
                     break;
 
                 case SendingStates.WAIT_START_FRAME_ANSWER:
                     Debug.WriteLine(" --- Reached State 5: Wait for answer on startFrame ---");
                     bool gotFrameAnswer = can.getFrameAnswer();
-                    if(gotFrameAnswer)
+                    if (gotFrameAnswer)
                     {
                         SendingState = SendingStates.SEND_CONFIG;
+                        progressBar.PerformStep();
                     }
                     break;
 
                 case SendingStates.SEND_CONFIG:
                     Debug.WriteLine(" --- Reached State 6: Send entire configuration ---");
-                    can.SendScreenConfigConsecutiveFrames( ScreenConfigs.getConfig(CurrentConfigNr) );
+                    bool r3 = can.SendScreenConfigConsecutiveFrames(ScreenConfigs.getConfig(CurrentConfigNr));
+                    if (r3 == false)
+                    {
+                        Debug.WriteLine("CAN Error");
+                    }
                     SendingState = SendingStates.WAIT_ACK;
+                    progressBar.PerformStep();
                     break;
 
                 case SendingStates.WAIT_ACK:
@@ -220,10 +244,13 @@ namespace Nanni_ScreenConfigurator
                     if (gotConfigAck)
                     {
                         SendingState = SendingStates.DONE;
+                        progressBar.PerformStep();
                     }
                     break;
+
                 case SendingStates.DONE:
                     Debug.WriteLine(" --- Reached State 8: Succesfully Finished ---");
+                    progressBar.PerformStep();
                     stopConfigSendingProcess();
                     break;
 
@@ -244,6 +271,7 @@ namespace Nanni_ScreenConfigurator
             CurrentConfigNr = -1;
             can.resetProcessAnswers();  // make sure, flaggs are reset
             can.setCanState(1);         // back to deviceList state
+            progressBar.Value = 0;
         }
 
 
@@ -284,10 +312,6 @@ namespace Nanni_ScreenConfigurator
                         Debug.WriteLine("OceanLink 4.3 found!");
                     }
                 }
-                else
-                {
-                    Debug.WriteLine("Other Device Found");
-                }
             }
         }
 
@@ -306,6 +330,19 @@ namespace Nanni_ScreenConfigurator
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
             can.TerminateCanBusConnection();
+        }
+
+
+        private void tmr_GuiDelays_Tick(object sender, EventArgs e)
+        {
+            tmr_GuiDelays.Enabled = false;
+            tmr_GuiDelays.Stop();
+            this.UseWaitCursor = false;             // no idea why both are required to get the cursor to update immediately ?
+            Cursor.Current = Cursors.Default;
+            if (OL43List.Count > 0)
+            {
+                cb_Display.DroppedDown = true;
+            }
         }
     }
 }

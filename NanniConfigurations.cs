@@ -9,14 +9,49 @@ namespace Nanni_ScreenConfigurator
 {
     internal class NanniConfigurations
     {
+        private readonly Dictionary<int, List<byte>> ConfigMessages = new();
+
         public NanniConfigurations()
         {
             AddConfig01();
+            AddConfig02();
+            AddConfig03();
         }
 
+        #region Getters
+        public List<byte> getConfig(int configNr)
+        {
+            List<byte> config = new();
+            if (ConfigMessages.ContainsKey(configNr))
+            {
+                config = ConfigMessages[configNr];
+            }
+            else
+            {
+                Debug.WriteLine("ERROR C003: Invalid Config Message requested!");
+            }
+            return config;
+        }
 
-        private Dictionary<int, List<byte>> ConfigMessages = new Dictionary<int, List<byte>>();
-        
+        public List<byte> getConfig_StartingFrame(int configNr)
+        {
+            List<byte> config = new List<byte>();
+            if (ConfigMessages.ContainsKey(configNr))
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    config.Add(ConfigMessages[configNr].ElementAt(i));
+                }
+            }
+            else
+            {
+                Debug.WriteLine("ERROR C004: Invalid Config Message requested!");
+            }
+            return config;
+        }
+        #endregion
+
+        #region Config_Definitions
         private void AddConfig01()
         {
             List<byte> Config01 = new List<byte>();
@@ -93,53 +128,42 @@ namespace Nanni_ScreenConfigurator
 
         private void AddConfig02()
         {
-            List<byte> Config02 = new List<byte>();
+            List<byte> Config = new List<byte>();
 
             /*Config01.Add(0x02);
-            Config01.Add(0x02);
-            Config01.Add(0x02);
+            Config.Add(0x02);
+            Config.Add(0x02);
 
-            Config01.Add(0x);
-            Config01.Add(0x);
-            Config01.Add(0x);
-            Config01.Add(0x);
-            Config01.Add(0x);
-            Config01.Add(0x);
-            Config01.Add(0x);
-            Config01.Add(0x);*/
-            ConfigMessages.Add(2, Config02);
+            Config.Add(0x);
+            Config.Add(0x);
+            Config.Add(0x);
+            Config.Add(0x);
+            Config.Add(0x);
+            Config.Add(0x);
+            Config.Add(0x);
+            Config.Add(0x);*/
+            ConfigMessages.Add(2, Config);
         }
 
-
-        public List<byte> getConfig(int configNr)
+        private void AddConfig03()
         {
-            List<byte> config = new List<byte>();
-            if(ConfigMessages.ContainsKey(configNr))
-            {
-                config = ConfigMessages[configNr];
-            }
-            else
-            {
-                Debug.WriteLine("ERROR C003: Invalid Config Message requested!");
-            }
-            return config;
-        }
+            List<byte> Config = new List<byte>();
 
-        public List<byte> getConfig_StartingFrame(int configNr)
-        {
-            List<byte> config = new List<byte>();
-            if (ConfigMessages.ContainsKey(configNr))
-            {
-                for(int i=0; i<3; i++)
-                {
-                    config.Add(ConfigMessages[configNr].ElementAt(i));
-                }
-            }
-            else
-            {
-                Debug.WriteLine("ERROR C004: Invalid Config Message requested!");
-            }
-            return config;
+            /*Config.Add(0x02);
+            Config.Add(0x02);
+            Config.Add(0x02);
+
+            Config.Add(0x);
+            Config.Add(0x);
+            Config.Add(0x);
+            Config.Add(0x);
+            Config.Add(0x);
+            Config.Add(0x);
+            Config.Add(0x);
+            Config.Add(0x);*/
+            ConfigMessages.Add(3, Config);
         }
+        #endregion
+
     }
 }

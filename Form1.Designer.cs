@@ -37,6 +37,8 @@
             cb_Engines = new ComboBox();
             tmr_WaitForDevices = new System.Windows.Forms.Timer(components);
             tmr_SendConfigStateMachine = new System.Windows.Forms.Timer(components);
+            progressBar = new ProgressBar();
+            tmr_GuiDelays = new System.Windows.Forms.Timer(components);
             SuspendLayout();
             // 
             // bt_Refresh
@@ -53,7 +55,7 @@
             // bt_Write
             // 
             bt_Write.Font = new Font("Segoe UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point);
-            bt_Write.Location = new Point(241, 223);
+            bt_Write.Location = new Point(237, 187);
             bt_Write.Name = "bt_Write";
             bt_Write.Size = new Size(188, 28);
             bt_Write.TabIndex = 1;
@@ -108,17 +110,32 @@
             // 
             tmr_SendConfigStateMachine.Tick += tmr_SendConfigStateMachine_Tick;
             // 
+            // progressBar
+            // 
+            progressBar.Location = new Point(17, 221);
+            progressBar.Maximum = 8;
+            progressBar.Name = "progressBar";
+            progressBar.Size = new Size(408, 12);
+            progressBar.TabIndex = 1;
+            // 
+            // tmr_GuiDelays
+            // 
+            tmr_GuiDelays.Interval = 1000;
+            tmr_GuiDelays.Tick += tmr_GuiDelays_Tick;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(437, 259);
+            ClientSize = new Size(437, 242);
+            Controls.Add(progressBar);
             Controls.Add(cb_Engines);
             Controls.Add(cb_Display);
             Controls.Add(label2);
             Controls.Add(label1);
             Controls.Add(bt_Write);
             Controls.Add(bt_Refresh);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
             Name = "Form1";
             Text = "Nanni Screen Configurator";
             FormClosing += Form1_FormClosing;
@@ -136,5 +153,7 @@
         private ComboBox cb_Engines;
         private System.Windows.Forms.Timer tmr_WaitForDevices;
         private System.Windows.Forms.Timer tmr_SendConfigStateMachine;
+        private ProgressBar progressBar;
+        private System.Windows.Forms.Timer tmr_GuiDelays;
     }
 }

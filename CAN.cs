@@ -437,6 +437,10 @@ namespace Nanni_ScreenConfigurator
 
         public bool SendScreenConfigStartFrame(List<byte> StartingFrames)
         {
+            if(StartingFrames.Count < 3)
+            {
+                return false;
+            }
             byte[] data = new byte[8];
             data[0] = 0x10;     
             data[1] = 0x36;
