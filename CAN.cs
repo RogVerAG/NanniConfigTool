@@ -27,29 +27,19 @@ namespace Nanni_ScreenConfigurator
             UNDEFINED
         };
         private const int veratron_ErrorCode = -44;
-        private const int Max_Allowed_Message_Length = 250;     // Messages > 250 bytes should just be cut to this length.
         private Tool_CAN_State ToolCanState;
         private int ToolAddress = 0xFE;
         private int CanHandle = 0xFF;
         private bool CanIsRunning = false;
         private bool CanConnectionIsOpen = false;
         private Thread? thread_CanMsgPolling;                    // Instance of polling thread
-        private int MessageCounter = 0;
         public bool MessageCount_Enable = false;
-
-        // Logger-Variables
-        public Queue<string> CanMsg_Queue = new Queue<string>(); // Stores received messages to make more efficient readouts during trace
 
         // DeviceList-Variables
         private Dictionary<int, t_ProductInformation> DevList = new ();
         private Dictionary<int, int> TopSeqNrs_ProdInfo = new ();               // Required for MultiFrame Message
         private Dictionary<int, List<byte>> ProdInfo_Buffers = new ();   // Required for MultiFrame Message
         public bool flg_newDeviceFound = false;
-
-        // MessageViewer-Variables
-        private SortedDictionary<int, SortedDictionary<int, t_CanMessage>> MessageStock = new ();
-        //public MessageIdHandler IdHandler = new MessageIdHandler();     // Assures, each message type can be distinguished
-        //public NMEA_Decoder MsgDecoder = new NMEA_Decoder();            // Instance of Decoder-Class
 
         //Variables for Nanni Tool
         private int UDS_TX = 0x7F2;
@@ -157,16 +147,12 @@ namespace Nanni_ScreenConfigurator
                         break;
 
                     case Tool_CAN_State.NanniConfigurator:
-                        
-                        Debug.WriteLine("HERE: ID = 0x" + Convert.ToString(id, 16).ToUpper());
                         if(id == UDS_RX)
                         {
-                            Debug.WriteLine("HERE 2");
                             if (data[0] == 0x02 && data[1] == 0x50 && data[2] == 0x03)
                             {
                                 // UDS extended anwer
-                                ExtendDiagAnswer = true;    //Define answer was ture -> value will be polled via getExtDiagAnswer()
-                                Debug.WriteLine("HERE 3");
+                                ExtendDiagAnswer = true;    //ExtendDiagReq. acknowledged -> set flag -> value will be polled via getExtDiagAnswer()
                             }
                             else if (data[0] == 0x30 && data[2] == 0x14)
                             {
@@ -176,23 +162,9 @@ namespace Nanni_ScreenConfigurator
                             else if (data[0] == 0x03 && data[1] == 0x6E && data[2] == 0x01 && data[3] == 0x2C)
                             {
                                 // all written
-                                //iState_g = 8;
                                 ConfigAcknowledgement = true;
                             }
                         }
-                        /*Not sure whether this is required ???
-                         * 
-                         * else
-                        {
-                            int iPGN = (id & 0x03FFFFFF) >> 8;
-                            switch (iPGN)
-                            {
-                                case 0xEEFF: // Address Claim  (actually it would be 0xEE00 but it is Destination dependant and since we send out our info with source 0xFF we check also this Destination address)
-                                    vAddInstrumentToList_g(data, ucSrcAdr);
-                                    vCan_RequestPgn_g(0x1F014, ucSrcAdr); // Request Product Information PGN (Request a Specific Source Address)
-                                    break;
-                            }
-                        }*/
                         break;
                 }
             }

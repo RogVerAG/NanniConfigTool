@@ -194,13 +194,13 @@ namespace Nanni_ScreenConfigurator
                     break;
 
                 case SendingStates.SEND_START_FRAME:
-                    Debug.WriteLine(" --- Reached State 4 ---");
+                    Debug.WriteLine(" --- Reached State 4: Sending start frame ---");
                     can.SendScreenConfigStartFrame( ScreenConfigs.getConfig_StartingFrame(CurrentConfigNr) );
                     SendingState = SendingStates.WAIT_START_FRAME_ANSWER;
                     break;
 
                 case SendingStates.WAIT_START_FRAME_ANSWER:
-                    Debug.WriteLine(" --- Reached State 5 ---");
+                    Debug.WriteLine(" --- Reached State 5: Wait for answer on startFrame ---");
                     bool gotFrameAnswer = can.getFrameAnswer();
                     if(gotFrameAnswer)
                     {
@@ -209,13 +209,13 @@ namespace Nanni_ScreenConfigurator
                     break;
 
                 case SendingStates.SEND_CONFIG:
-                    Debug.WriteLine(" --- Reached State 6 ---");
+                    Debug.WriteLine(" --- Reached State 6: Send entire configuration ---");
                     can.SendScreenConfigConsecutiveFrames( ScreenConfigs.getConfig(CurrentConfigNr) );
                     SendingState = SendingStates.WAIT_ACK;
                     break;
 
                 case SendingStates.WAIT_ACK:
-                    Debug.WriteLine(" --- Reached State 7 ---");
+                    Debug.WriteLine(" --- Reached State 7: wait for acknowledge ---");
                     bool gotConfigAck = can.getConfigAcknowledgment();
                     if (gotConfigAck)
                     {
@@ -223,7 +223,7 @@ namespace Nanni_ScreenConfigurator
                     }
                     break;
                 case SendingStates.DONE:
-                    Debug.WriteLine(" --- Reached State 8 ---");
+                    Debug.WriteLine(" --- Reached State 8: Succesfully Finished ---");
                     stopConfigSendingProcess();
                     break;
 
