@@ -18,20 +18,20 @@ namespace Nanni_ScreenConfigurator
 {
     public partial class Form1 : Form
     {
-        public enum SendingStates
+        private enum SendingStates
         {
             DEFAULT, ENABLE_UDS, EXTEND_DIAG_SESSION, WAIT_UDS_EXTEND, SEND_START_FRAME, WAIT_START_FRAME_ANSWER, SEND_CONFIG, WAIT_ACK, DONE
         }
 
 
-        private CAN can = new CAN();                // Instance of CAN-class
-        Dictionary<int, t_ProductInformation> OL43List = new Dictionary<int, t_ProductInformation>();
+        private readonly CAN can = new();                // Instance of CAN-class
+        private readonly Dictionary<int, t_ProductInformation> OL43List = new();
         private SendingStates SendingState = SendingStates.DEFAULT;
         private int TimeoutCounter = 0;
         private int CurrentTargetAdr = -1;
         private int CurrentConfigNr = -1;
 
-        private NanniConfigurations ScreenConfigs = new NanniConfigurations();
+        private readonly NanniConfigurations ScreenConfigs = new();
 
         public Form1()
         {
@@ -315,7 +315,7 @@ namespace Nanni_ScreenConfigurator
             }
         }
 
-        private bool IsInSerialNumberRange(int number)
+        private static bool IsInSerialNumberRange(int number)
         {
             if (number >= 0x0A0000 && number <= 0x0AFFFF)
             {

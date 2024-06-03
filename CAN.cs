@@ -42,8 +42,8 @@ namespace Nanni_ScreenConfigurator
         public bool flg_newDeviceFound = false;
 
         //Variables for Nanni Tool
-        private int UDS_TX = 0x7F2;
-        private int UDS_RX = 0x7FA;
+        private const int UDS_TX = 0x7F2;
+        private const int UDS_RX = 0x7FA;
         private bool ExtendDiagAnswer = false;
         private bool FrameAnswer = false;
         private bool ConfigAcknowledgement = false;

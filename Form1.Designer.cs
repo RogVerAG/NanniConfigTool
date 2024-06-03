@@ -29,6 +29,7 @@
         private void InitializeComponent()
         {
             components = new System.ComponentModel.Container();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
             bt_Refresh = new Button();
             bt_Write = new Button();
             label1 = new Label();
@@ -136,6 +137,7 @@
             Controls.Add(bt_Write);
             Controls.Add(bt_Refresh);
             FormBorderStyle = FormBorderStyle.FixedSingle;
+            Icon = (Icon)resources.GetObject("$this.Icon");
             Name = "Form1";
             Text = "Nanni Screen Configurator";
             FormClosing += Form1_FormClosing;
