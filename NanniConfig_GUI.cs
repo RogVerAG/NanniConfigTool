@@ -16,7 +16,7 @@ using static Canlib.CanlibAPI;
 
 namespace Nanni_ScreenConfigurator
 {
-    public partial class Form1 : Form
+    public partial class NanniConfig_GUI : Form
     {
         private enum SendingStates
         {
@@ -33,7 +33,7 @@ namespace Nanni_ScreenConfigurator
 
         private readonly NanniConfigurations ScreenConfigs = new();
 
-        public Form1()
+        public NanniConfig_GUI()
         {
             InitializeComponent();
             InitializeKvaserInterface();

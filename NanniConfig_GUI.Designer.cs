@@ -1,6 +1,6 @@
 ﻿namespace Nanni_ScreenConfigurator
 {
-    partial class Form1
+    partial class NanniConfig_GUI
     {
         /// <summary>
         ///  Required designer variable.
@@ -29,7 +29,7 @@
         private void InitializeComponent()
         {
             components = new System.ComponentModel.Container();
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(NanniConfig_GUI));
             bt_Refresh = new Button();
             bt_Write = new Button();
             label1 = new Label();
