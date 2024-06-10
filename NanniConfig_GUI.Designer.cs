@@ -37,9 +37,10 @@
             cb_Display = new ComboBox();
             cb_Engines = new ComboBox();
             tmr_WaitForDevices = new System.Windows.Forms.Timer(components);
-            tmr_SendConfigStateMachine = new System.Windows.Forms.Timer(components);
+            tmr_SendScreenConfigStateMachine = new System.Windows.Forms.Timer(components);
             progressBar = new ProgressBar();
             tmr_GuiDelays = new System.Windows.Forms.Timer(components);
+            tmr_SendPinConfigStateMachine = new System.Windows.Forms.Timer(components);
             SuspendLayout();
             // 
             // bt_Refresh
@@ -107,16 +108,17 @@
             // 
             tmr_WaitForDevices.Tick += tmr_WaitForDevices_Tick;
             // 
-            // tmr_SendConfigStateMachine
+            // tmr_SendScreenConfigStateMachine
             // 
-            tmr_SendConfigStateMachine.Tick += tmr_SendConfigStateMachine_Tick;
+            tmr_SendScreenConfigStateMachine.Tick += tmr_SendScreenConfigStateMachine_Tick;
             // 
             // progressBar
             // 
             progressBar.Location = new Point(17, 221);
-            progressBar.Maximum = 8;
+            progressBar.Maximum = 32;
             progressBar.Name = "progressBar";
             progressBar.Size = new Size(408, 12);
+            progressBar.Step = 1;
             progressBar.TabIndex = 1;
             // 
             // tmr_GuiDelays
@@ -124,7 +126,11 @@
             tmr_GuiDelays.Interval = 1000;
             tmr_GuiDelays.Tick += tmr_GuiDelays_Tick;
             // 
-            // Form1
+            // tmr_SendPinConfigStateMachine
+            // 
+            tmr_SendPinConfigStateMachine.Tick += tmr_SendPinConfigStateMachine_Tick;
+            // 
+            // NanniConfig_GUI
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
@@ -138,7 +144,7 @@
             Controls.Add(bt_Refresh);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             Icon = (Icon)resources.GetObject("$this.Icon");
-            Name = "Form1";
+            Name = "NanniConfig_GUI";
             Text = "Nanni Screen Configurator";
             FormClosing += Form1_FormClosing;
             ResumeLayout(false);
@@ -154,8 +160,9 @@
         private ComboBox cb_Display;
         private ComboBox cb_Engines;
         private System.Windows.Forms.Timer tmr_WaitForDevices;
-        private System.Windows.Forms.Timer tmr_SendConfigStateMachine;
+        private System.Windows.Forms.Timer tmr_SendScreenConfigStateMachine;
         private ProgressBar progressBar;
         private System.Windows.Forms.Timer tmr_GuiDelays;
+        private System.Windows.Forms.Timer tmr_SendPinConfigStateMachine;
     }
 }

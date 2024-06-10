@@ -45,8 +45,10 @@ namespace Nanni_ScreenConfigurator
         private const int UDS_TX = 0x7F2;
         private const int UDS_RX = 0x7FA;
         private bool ExtendDiagAnswer = false;
-        private bool FrameAnswer = false;
-        private bool ConfigAcknowledgement = false;
+        private bool StartingFrameAnswer = false;
+        private bool MessageBlockAcknowledgement = false;
+        public byte Byte4 = 0x00;
+        public byte StartingFrameRecognitionByte = 0x00;
 
         #endregion
 
@@ -151,18 +153,18 @@ namespace Nanni_ScreenConfigurator
                         {
                             if (data[0] == 0x02 && data[1] == 0x50 && data[2] == 0x03)
                             {
-                                // UDS extended anwer
+                                // UDS extended answer
                                 ExtendDiagAnswer = true;    //ExtendDiagReq. acknowledged -> set flag -> value will be polled via getExtDiagAnswer()
                             }
                             else if (data[0] == 0x30 && data[2] == 0x14)
                             {
-                                // consecutive frames ansewr
-                                FrameAnswer = true;
+                                // frames ansewr
+                                StartingFrameAnswer = true;
                             }
-                            else if (data[0] == 0x03 && data[1] == 0x6E && data[2] == 0x01 && data[3] == 0x2C)
+                            else if (data[0] == 0x03 && data[1] == 0x6E && data[2] == 0x01 && data[3] == Byte4)
                             {
                                 // all written
-                                ConfigAcknowledgement = true;
+                                MessageBlockAcknowledgement = true;
                             }
                         }
                         break;
@@ -435,7 +437,7 @@ namespace Nanni_ScreenConfigurator
             return false;
         }
 
-        public bool SendScreenConfigStartFrame(List<byte> StartingFrames)
+        public bool SendConfigStartFrame(List<byte> StartingFrames)
         {
             if(StartingFrames.Count < 3)
             {
@@ -443,10 +445,10 @@ namespace Nanni_ScreenConfigurator
             }
             byte[] data = new byte[8];
             data[0] = 0x10;     
-            data[1] = 0x36;
+            data[1] = StartingFrameRecognitionByte;
             data[2] = 0x2E;
             data[3] = 0x01;
-            data[4] = 0x2C;
+            data[4] = Byte4;
 
             data[5] = StartingFrames.ElementAt(0);
             data[6] = StartingFrames.ElementAt(1);
@@ -461,11 +463,12 @@ namespace Nanni_ScreenConfigurator
             return true;
         }
 
+
         public bool getFrameAnswer()
         {
-            if (FrameAnswer)
+            if (StartingFrameAnswer)
             {
-                FrameAnswer = false;
+                StartingFrameAnswer = false;
                 return true;
             }
             return false;
@@ -512,9 +515,9 @@ namespace Nanni_ScreenConfigurator
 
         public bool getConfigAcknowledgment()
         {
-            if (ConfigAcknowledgement)
+            if (MessageBlockAcknowledgement)
             {
-                ConfigAcknowledgement = false;
+                MessageBlockAcknowledgement = false;
                 return true;
             }
             return false;
@@ -522,9 +525,9 @@ namespace Nanni_ScreenConfigurator
 
         public void resetProcessAnswers()
         {
-            ConfigAcknowledgement = false;
+            MessageBlockAcknowledgement = false;
             ExtendDiagAnswer = false;
-            FrameAnswer = false;
+            StartingFrameAnswer = false;
         }
 
         #endregion
