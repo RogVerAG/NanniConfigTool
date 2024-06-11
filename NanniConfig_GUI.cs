@@ -18,6 +18,7 @@ namespace Nanni_ScreenConfigurator
 {
     public partial class NanniConfig_GUI : Form
     {
+        #region Variables
         private enum SendingScreenStates
         {
             DEFAULT,
@@ -67,7 +68,9 @@ namespace Nanni_ScreenConfigurator
         private int CurrentConfigNr = -1;
 
         private readonly NanniConfigurations ScreenConfigs = new();
+        #endregion
 
+        #region Init
         public NanniConfig_GUI()
         {
             InitializeComponent();
@@ -93,7 +96,9 @@ namespace Nanni_ScreenConfigurator
             }
             can.start_CanPollingThread();
         }
+        #endregion
 
+        #region Buttons
         private void bt_Refresh_Click(object sender, EventArgs e)
         {
             DisplayWaitCursor();
@@ -117,7 +122,9 @@ namespace Nanni_ScreenConfigurator
                 MessageBox.Show("Please select a configuration to upload.", "Missing Entry", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+        #endregion
 
+        #region GUI_Functions
         private void DisplayWaitCursor()
         {
             //Cursor.Current = Cursors.WaitCursor;
@@ -127,7 +134,6 @@ namespace Nanni_ScreenConfigurator
             tmr_GuiDelays.Start();
         }
 
-
         private void DeviceListRequest()
         {
             can.Request_DeviceListUpdate();
@@ -136,6 +142,60 @@ namespace Nanni_ScreenConfigurator
             tmr_WaitForDevices.Start();
         }
 
+        private void tmr_WaitForDevices_Tick(object sender, EventArgs e)
+        {
+            if (can.flg_newDeviceFound)
+            {
+                can.flg_newDeviceFound = false;
+                tmr_WaitForDevices.Start();
+                UpdateDisplayList();
+                tmr_WaitForDevices.Interval = 100;
+            }
+            else
+            {
+                tmr_WaitForDevices.Interval = 2000;
+            }
+        }
+
+        private void UpdateDisplayList()
+        {
+            Dictionary<int, t_ProductInformation> NewDeviceList = can.getDevices();
+            foreach (var Device in NewDeviceList)
+            {
+                int serialCode = Convert.ToInt32(Device.Value.SerialCode);
+                int SourceAddress = Device.Value.SourceAdr;
+                int DeviceClass = Device.Value.DeviceClass;
+
+                if (Device.Value.ManufactCode == 443 && DeviceClass == 120 && IsInSerialNumberRange(serialCode))
+                {
+                    // It's Produced by Veratron & is a display & is in OL4.3 serial number range
+                    if (!OL43List.ContainsKey(SourceAddress))
+                    {
+                        // Add display to global device list
+                        OL43List.Add(SourceAddress, Device.Value);
+                        // add display to drop down menu
+                        string SrcAdr_HexString = Convert.ToString(SourceAddress, 16).PadLeft(2, '0').ToUpper();
+                        cb_Display.Items.Add("0x" + SrcAdr_HexString + " - OceanLink 4.3");
+                        Debug.WriteLine("OceanLink 4.3 found!");
+                    }
+                }
+            }
+        }
+
+        private static bool IsInSerialNumberRange(int number)
+        {
+            if (number >= 0x0A0000 && number <= 0x0AFFFF)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+        #endregion
+
+        #region Sending
         private void startSendingConfiguration(string ConfigName)
         {
             switch (ConfigName)         // made with a switch, so names can be changed to something different (like Engine type)
@@ -188,7 +248,7 @@ namespace Nanni_ScreenConfigurator
                 return;
             }
 
-            CurrentTargetAdr = Convert.ToInt16(SelectedDisplay.Substring(2, 2), 16);
+            CurrentTargetAdr = Convert.ToInt16(SelectedDisplay.Substring(2, 2), 16);    // 3rd&4th char represent address in Hex
             startSendingScreenConfiguration();
         }
 
@@ -196,7 +256,6 @@ namespace Nanni_ScreenConfigurator
         {
             SendingState1 = SendingScreenStates.ENABLE_UDS;
             can.setCanState(4);     // state 4 = NanniConfigSending
-            TimeoutCounter = 100;
             tmr_SendScreenConfigStateMachine.Enabled = true;
             tmr_SendScreenConfigStateMachine.Start();
         }
@@ -205,9 +264,27 @@ namespace Nanni_ScreenConfigurator
         {
             SendingState2 = SendingPinsStates.ENABLE_UDS;
             can.setCanState(4);     // state 4 = NanniConfigSending
-            TimeoutCounter = 100;
             tmr_SendPinConfigStateMachine.Enabled = true;
             tmr_SendPinConfigStateMachine.Start();
+        }
+
+        private void stopConfigSendingProcess(bool hardStop = false)
+        {
+            SendingState1 = SendingScreenStates.DEFAULT;
+            tmr_SendScreenConfigStateMachine.Stop();
+            tmr_SendScreenConfigStateMachine.Enabled = false;
+            tmr_SendPinConfigStateMachine.Stop();
+            tmr_SendPinConfigStateMachine.Enabled = false;
+            TimeoutCounter = 0;
+            can.resetProcessAnswers();  // make sure, flaggs are reset
+
+            if (hardStop)
+            {
+                can.setCanState(1);         // back to deviceList state
+                CurrentTargetAdr = -1;
+                CurrentConfigNr = -1;
+                progressBar.Value = 0;
+            }
         }
 
         private void tmr_SendScreenConfigStateMachine_Tick(object sender, EventArgs e)
@@ -314,78 +391,6 @@ namespace Nanni_ScreenConfigurator
                     Debug.WriteLine("Error C004: Non-Expected Switch state");
                     CurrentTargetAdr = -1;
                     break;
-            }
-        }
-
-        private void stopConfigSendingProcess(bool hardStop = false)
-        {
-            SendingState1 = SendingScreenStates.DEFAULT;
-            tmr_SendScreenConfigStateMachine.Stop();
-            tmr_SendScreenConfigStateMachine.Enabled = false;
-            tmr_SendPinConfigStateMachine.Stop();
-            tmr_SendPinConfigStateMachine.Enabled = false;
-            TimeoutCounter = 0;
-            can.resetProcessAnswers();  // make sure, flaggs are reset
-
-            if (hardStop)
-            {
-                can.setCanState(1);         // back to deviceList state
-                CurrentTargetAdr = -1;
-                CurrentConfigNr = -1;
-                progressBar.Value = 0;
-            }
-        }
-
-
-        private void tmr_WaitForDevices_Tick(object sender, EventArgs e)
-        {
-            if (can.flg_newDeviceFound)
-            {
-                can.flg_newDeviceFound = false;
-                tmr_WaitForDevices.Start();
-                UpdateDisplayList();
-                tmr_WaitForDevices.Interval = 100;
-            }
-            else
-            {
-                tmr_WaitForDevices.Interval = 2000;
-            }
-        }
-
-        private void UpdateDisplayList()
-        {
-            Dictionary<int, t_ProductInformation> NewDeviceList = can.getDevices();
-            foreach (var Device in NewDeviceList)
-            {
-                int serialCode = Convert.ToInt32(Device.Value.SerialCode);
-                int SourceAddress = Device.Value.SourceAdr;
-                int DeviceClass = Device.Value.DeviceClass;
-
-                if (Device.Value.ManufactCode == 443 && DeviceClass == 120 && IsInSerialNumberRange(serialCode))
-                {
-                    // It's Produced by Veratron & is a display & is in OL4.3 serial number range
-                    if (!OL43List.ContainsKey(SourceAddress))
-                    {
-                        // Add display to global device list
-                        OL43List.Add(SourceAddress, Device.Value);
-                        // add display to drop down menu
-                        string SrcAdr_HexString = Convert.ToString(SourceAddress, 16).PadLeft(2, '0').ToUpper();
-                        cb_Display.Items.Add("0x" + SrcAdr_HexString + " - OceanLink 4.3");
-                        Debug.WriteLine("OceanLink 4.3 found!");
-                    }
-                }
-            }
-        }
-
-        private static bool IsInSerialNumberRange(int number)
-        {
-            if (number >= 0x0A0000 && number <= 0x0AFFFF)
-            {
-                return true;
-            }
-            else
-            {
-                return false;
             }
         }
 
@@ -609,4 +614,5 @@ namespace Nanni_ScreenConfigurator
             }
         }
     }
+    #endregion
 }
