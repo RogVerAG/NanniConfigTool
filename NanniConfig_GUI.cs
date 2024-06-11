@@ -5,6 +5,7 @@ using System.Drawing;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -68,7 +69,8 @@ namespace Nanni_ScreenConfigurator
         private enum ConfigSteps
         {
             SCREENS,
-            PINS,
+            ANALOG_PINS,
+            FREQUENCY_PINS,
             DEFAULT
         }
 
@@ -117,8 +119,10 @@ namespace Nanni_ScreenConfigurator
         private void bt_Refresh_Click(object sender, EventArgs e)
         {
             DisplayWaitCursor();
+            CancelRunningSendingProcess();
             OL43List.Clear();
             cb_Display.Items.Clear();
+            changeStatusLabel(ProcessStates.OFF);
             DeviceListRequest();
         }
 
@@ -171,33 +175,61 @@ namespace Nanni_ScreenConfigurator
                 tmr_WaitForDevices.Interval = 2000;
             }
         }
-
-        private void UpdateDisplayList()
+        
+        public void CancelRunningSendingProcess()
         {
-            Dictionary<int, t_ProductInformation> NewDeviceList = can.getDevices();
-            foreach (var Device in NewDeviceList)
+            if(tmr_SendingStateMachine.Enabled)
             {
-                int serialCode = Convert.ToInt32(Device.Value.SerialCode);
-                int SourceAddress = Device.Value.SourceAdr;
-                int DeviceClass = Device.Value.DeviceClass;
-
-                if (Device.Value.ManufactCode == 443 && DeviceClass == 120 && IsInSerialNumberRange(serialCode))
-                {
-                    // It's Produced by Veratron & is a display & is in OL4.3 serial number range
-                    if (!OL43List.ContainsKey(SourceAddress))
-                    {
-                        // Add display to global device list
-                        OL43List.Add(SourceAddress, Device.Value);
-                        // add display to drop down menu
-                        string SrcAdr_HexString = Convert.ToString(SourceAddress, 16).PadLeft(2, '0').ToUpper();
-                        cb_Display.Items.Add("0x" + SrcAdr_HexString + " - OceanLink 4.3");
-                        Debug.WriteLine("OceanLink 4.3 found!");
-                    }
-                }
+                stopConfigSendingProcess(hardStop: true);
+                changeStatusLabel(ProcessStates.OFF);
             }
         }
 
-        private static bool IsInSerialNumberRange(int number)
+        [GeneratedRegex("^[0-9A-Fa-f]+$")]
+        private static partial Regex HexadecimalRegex();
+
+        private void UpdateDisplayList()
+        {
+            Thread.Sleep(400);
+            Dictionary<int, t_ProductInformation> NewDeviceList = can.getDevices();
+            foreach (var Device in NewDeviceList)
+            {
+                
+                try{   
+                    // because the device list request sometimes receives invalid characters (STX)
+                    // -> causes exception to be thrown in SerialCode convesion
+                    // only happens on busy busses - I think
+
+                    long serialCode = Convert.ToInt64(Device.Value.SerialCode);
+                    int SourceAddress = Device.Value.SourceAdr;
+                    int DeviceClass = Device.Value.DeviceClass;
+
+                    if (Device.Value.ManufactCode == 443 && DeviceClass == 120 && IsInSerialNumberRange(serialCode))
+                    {
+                        // It's Produced by Veratron & is a display & is in OL4.3 serial number range
+                        if (!OL43List.ContainsKey(SourceAddress))
+                        {
+                            // Add display to global device list
+                            OL43List.Add(SourceAddress, Device.Value);
+                            // add display to drop down menu
+                            string SrcAdr_HexString = Convert.ToString(SourceAddress, 16).PadLeft(2, '0').ToUpper();
+                            cb_Display.Items.Add("0x" + SrcAdr_HexString + " - OceanLink 4.3");
+                            Debug.WriteLine("OceanLink 4.3 found!");
+                        }
+                    }
+                }
+                catch(Exception ex)
+                {
+                    Debug.WriteLine("----------- CONVERSION ERROR -----------------------");
+                    Debug.WriteLine(ex);
+                    Debug.WriteLine(Device.Value.SerialCode);
+                    continue;
+                }
+                
+            }
+        }
+
+        private static bool IsInSerialNumberRange(long number)
         {
             if (number >= 0x0A0000 && number <= 0x0AFFFF)
             {
@@ -292,7 +324,7 @@ namespace Nanni_ScreenConfigurator
 
         private void startSendingPinConfiguration()
         {
-            CurrentConfigStep = ConfigSteps.PINS;
+            CurrentConfigStep = ConfigSteps.ANALOG_PINS;
             SendingState2 = SendingPinsStates.ENABLE_UDS;
             can.setCanState(4);     // state 4 = NanniConfigSending
             TimeoutCounter = 40;
@@ -306,6 +338,7 @@ namespace Nanni_ScreenConfigurator
             StopTimer(tmr_SendingStateMachine);
             TimeoutCounter = 0;
             can.resetProcessAnswers();  // make sure, flaggs are reset
+            CurrentConfigStep = ConfigSteps.DEFAULT;
 
             if (hardStop)
             {
@@ -370,9 +403,13 @@ namespace Nanni_ScreenConfigurator
                 case ConfigSteps.SCREENS:
                     ScreenConfig_StateMachine();
                     break;
-                case ConfigSteps.PINS:
+                case ConfigSteps.ANALOG_PINS:
                     PinConfig_StateMachine();
                     break;
+                case ConfigSteps.FREQUENCY_PINS:
+                    sendFrequencyPinsConfig();
+                    break;
+               
             }
         }
 
@@ -641,8 +678,7 @@ namespace Nanni_ScreenConfigurator
                 case SendingPinsStates.DONE:
                     Debug.WriteLine(" --- Reached State 16: Succesfully Finished ---");
                     progressBar.PerformStep();
-                    stopConfigSendingProcess(hardStop: true);
-                    changeStatusLabel(ProcessStates.SUCCESS);
+                    CurrentConfigStep = ConfigSteps.FREQUENCY_PINS;
                     break;
 
                 default:
@@ -652,6 +688,19 @@ namespace Nanni_ScreenConfigurator
             }
         }
 
+        private void sendFrequencyPinsConfig()
+        {
+            int pprVal = ScreenConfigs.PPRevConfigValues[CurrentConfigNr];
+
+            bool res = can.SendFreqPinConfig(pprVal);
+            if(res == false)
+            {
+                FailExitSendingProcess("CAN Error");
+                return;
+            }
+            stopConfigSendingProcess(hardStop:true);
+            changeStatusLabel(ProcessStates.SUCCESS);
+        }
         #endregion
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)

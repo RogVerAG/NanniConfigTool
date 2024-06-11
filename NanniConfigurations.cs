@@ -9,7 +9,24 @@ namespace Nanni_ScreenConfigurator
 {
     internal class NanniConfigurations
     {
-        private readonly Dictionary<int, List<byte>> ConfigMessages = new();
+        private readonly Dictionary<int, List<byte>> ScreenConfigMessages = new();
+        public readonly Dictionary<int, int> PPRevConfigValues = new()
+        {
+            // Key = ConfigNr
+            // Value = Pulses Per revolution * 100 (in order to allow for decimals)
+            {1,  6000},   // Configuration 01 = 60 pprev
+            {2,  6000},   // Configuration 02 = 60 pprev
+            {3,  6000},   // Configuration 03 = 60 pprev
+            {4,  6000},   // Configuration 04 = 60 pprev
+            {5,  6000},   // Configuration 05 = 60 pprev
+            {6,  6000},   // Configuration 06 = 60 pprev
+            {7,  6000},   // Configuration 07 = 60 pprev
+            {8,  6000},   // Configuration 08 = 60 pprev
+            {9,  6000},   // Configuration 09 = 60 pprev
+            {10,  6000},  // Configuration 10 = 60 pprev
+            {11,  6000},  // Configuration 11 = 60 pprev
+            {12,  6000}   // Configuration 12 = 60 pprev
+        };
 
         public NanniConfigurations()
         {
@@ -22,9 +39,9 @@ namespace Nanni_ScreenConfigurator
         public List<byte> getConfig(int configNr)
         {
             List<byte> config = new();
-            if (ConfigMessages.ContainsKey(configNr))
+            if (ScreenConfigMessages.ContainsKey(configNr))
             {
-                config = ConfigMessages[configNr];
+                config = ScreenConfigMessages[configNr];
             }
             else
             {
@@ -36,11 +53,11 @@ namespace Nanni_ScreenConfigurator
         public List<byte> getScreenConfig_StartingFrame(int configNr)
         {
             List<byte> config = new List<byte>();
-            if (ConfigMessages.ContainsKey(configNr))
+            if (ScreenConfigMessages.ContainsKey(configNr))
             {
                 for (int i = 0; i < 3; i++)
                 {
-                    config.Add(ConfigMessages[configNr].ElementAt(i));
+                    config.Add(ScreenConfigMessages[configNr].ElementAt(i));
                 }
             }
             else
@@ -124,7 +141,7 @@ namespace Nanni_ScreenConfigurator
                 0x00
             };
 
-            ConfigMessages.Add(1, Config01);
+            ScreenConfigMessages.Add(1, Config01);
         }
 
         private void AddConfig02()
@@ -143,7 +160,7 @@ namespace Nanni_ScreenConfigurator
             Config.Add(0x);
             Config.Add(0x);
             Config.Add(0x);*/
-            ConfigMessages.Add(2, Config);
+            ScreenConfigMessages.Add(2, Config);
         }
 
         private void AddConfig03()
@@ -162,7 +179,7 @@ namespace Nanni_ScreenConfigurator
             Config.Add(0x);
             Config.Add(0x);
             Config.Add(0x);*/
-            ConfigMessages.Add(3, Config);
+            ScreenConfigMessages.Add(3, Config);
         }
         #endregion
 

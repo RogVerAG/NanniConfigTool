@@ -120,22 +120,21 @@ namespace Nanni_ScreenConfigurator
             }
         }
 
-        private byte getSourceAdr(int id)
+        private static byte getSourceAdr(int id)
         {
             return (byte)id;
         }
 
-        private int getPgn(int id)
+        private static int getPgn(int id)
         {
             return ((id & 0x03FFFFFF) >> 8);
         }
 
         private void ReadCan()
         {
-            uint dlc, flags, timestamp;
-            int id;
+            //uint dlc, flags, timestamp;
             byte[] data = new byte[8];
-            canStatus state = CanlibAPI.canRead(CanHandle, out id, data, out dlc, out flags, out timestamp);
+            canStatus state = CanlibAPI.canRead(CanHandle, out int id, data, out uint dlc, out uint flags, out uint timestamp);
 
             byte Rx_SrcAdr = getSourceAdr(id);
             int Rx_Pgn = getPgn(id);
@@ -238,7 +237,7 @@ namespace Nanni_ScreenConfigurator
 
         private void Process_0xEE00(byte[] data, byte SrcAdr)
         {
-            if (!DevList.ContainsKey(SrcAdr))
+            if(!DevList.ContainsKey(SrcAdr))
             {
                 // Create required containers for new device
                 DevList.Add(SrcAdr, new t_ProductInformation(SrcAdr) { });
@@ -439,12 +438,12 @@ namespace Nanni_ScreenConfigurator
 
         public bool SendConfigStartFrame(List<byte> StartingFrames)
         {
-            if(StartingFrames.Count < 3)
+            if (StartingFrames.Count < 3)
             {
                 return false;
             }
             byte[] data = new byte[8];
-            data[0] = 0x10;     
+            data[0] = 0x10;
             data[1] = StartingFrameRecognitionByte;
             data[2] = 0x2E;
             data[3] = 0x01;
@@ -463,6 +462,26 @@ namespace Nanni_ScreenConfigurator
             return true;
         }
 
+        public bool SendFreqPinConfig(int pprevVal)
+        {
+            byte[] data = new byte[8];
+            data[0] = 0xBB;
+            data[1] = 0x99;
+            data[2] = 0x11;
+            data[3] = 0x0;
+            data[4] = 0x0;
+            data[5] = (byte)(pprevVal % 256);
+            data[6] = (byte)((pprevVal - data[6]) / 256);
+            data[7] = 0xFF;
+
+            uint dlc = (uint)data.Length;
+            canStatus status = CanlibAPI.canWrite(CanHandle, 0x00FF0100, data, dlc, CanlibAPI.canMSG_EXT);
+            if (status != CanlibAPI.canStatus.canOK)
+            {
+                return false;
+            }
+            return true;
+        }
 
         public bool getFrameAnswer()
         {
@@ -512,7 +531,6 @@ namespace Nanni_ScreenConfigurator
             return true;
         }
 
-
         public bool getConfigAcknowledgment()
         {
             if (MessageBlockAcknowledgement)
@@ -529,7 +547,6 @@ namespace Nanni_ScreenConfigurator
             ExtendDiagAnswer = false;
             StartingFrameAnswer = false;
         }
-
         #endregion
 
         #region Conversion
