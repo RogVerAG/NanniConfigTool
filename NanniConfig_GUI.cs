@@ -283,7 +283,7 @@ namespace Nanni_ScreenConfigurator
                 can.setCanState(1);         // back to deviceList state
                 CurrentTargetAdr = -1;
                 CurrentConfigNr = -1;
-                progressBar.Value = 0;
+                //progressBar.Value = 0;
             }
         }
 
@@ -293,7 +293,7 @@ namespace Nanni_ScreenConfigurator
             {
                 if (--TimeoutCounter == 0)
                 {
-                    stopConfigSendingProcess();
+                    stopConfigSendingProcess(hardStop: true);
                     MessageBox.Show("Timeout", "No answer from device", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
@@ -381,7 +381,7 @@ namespace Nanni_ScreenConfigurator
                 case SendingScreenStates.DONE:
                     Debug.WriteLine(" --- Reached State 8: Succesfully Finished ---");
                     progressBar.PerformStep();
-                    stopConfigSendingProcess();
+                    stopConfigSendingProcess(hardStop: false);
                     //Prepare for sending Pin Configurations too
                     ScreenConfigs.defineCurrentPinConfig("StandardCurves_P8_Coolant120_P9OilPress10");
                     startSendingPinConfiguration();
@@ -418,7 +418,7 @@ namespace Nanni_ScreenConfigurator
             {
                 if (--TimeoutCounter == 0)
                 {
-                    stopConfigSendingProcess();
+                    stopConfigSendingProcess(hardStop: true);
                     MessageBox.Show("Timeout", "No answer from device", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
@@ -468,7 +468,6 @@ namespace Nanni_ScreenConfigurator
                     can.StartingFrameRecognitionByte = 0x19;
                     can.SendConfigStartFrame(StartingFrame1);
                     SendingState2 = SendingPinsStates.WAIT_START_FRAME_ANSWER_P1;
-                    progressBar.PerformStep();
                     break;
 
                 case SendingPinsStates.WAIT_START_FRAME_ANSWER_P1:
@@ -476,14 +475,12 @@ namespace Nanni_ScreenConfigurator
                     if (gotFrameAnswer1)
                     {
                         SendingState2 = SendingPinsStates.SEND_CONFIG_P1;
-                        progressBar.PerformStep();
                     }
                     break;
 
                 case SendingPinsStates.SEND_CONFIG_P1:
                     can.SendScreenConfigConsecutiveFrames(ScreenConfigs.PinConfig_Part1);
                     SendingState2 = SendingPinsStates.WAIT_ACK_P1;
-                    progressBar.PerformStep();
                     break;
 
                 case SendingPinsStates.WAIT_ACK_P1:
@@ -501,7 +498,6 @@ namespace Nanni_ScreenConfigurator
                     can.Byte4 = 0x45;
                     can.SendConfigStartFrame(StartingFrame2);
                     SendingState2 = SendingPinsStates.WAIT_START_FRAME_ANSWER_P2;
-                    progressBar.PerformStep();
                     break;
 
                 case SendingPinsStates.WAIT_START_FRAME_ANSWER_P2:
@@ -509,14 +505,12 @@ namespace Nanni_ScreenConfigurator
                     if (gotFrameAnswer2)
                     {
                         SendingState2 = SendingPinsStates.SEND_CONFIG_P2;
-                        progressBar.PerformStep();
                     }
                     break;
 
                 case SendingPinsStates.SEND_CONFIG_P2:
                     can.SendScreenConfigConsecutiveFrames(ScreenConfigs.PinConfig_Part2);
                     SendingState2 = SendingPinsStates.WAIT_ACK_P2;
-                    progressBar.PerformStep();
                     break;
 
                 case SendingPinsStates.WAIT_ACK_P2:
@@ -534,7 +528,6 @@ namespace Nanni_ScreenConfigurator
                     can.Byte4 = 0x46;
                     can.SendConfigStartFrame(StartingFrame3);
                     SendingState2 = SendingPinsStates.WAIT_START_FRAME_ANSWER_P3;
-                    progressBar.PerformStep();
                     break;
 
                 case SendingPinsStates.WAIT_START_FRAME_ANSWER_P3:
@@ -542,14 +535,12 @@ namespace Nanni_ScreenConfigurator
                     if (gotFrameAnswer3)
                     {
                         SendingState2 = SendingPinsStates.SEND_CONFIG_P3;
-                        progressBar.PerformStep();
                     }
                     break;
 
                 case SendingPinsStates.SEND_CONFIG_P3:
                     can.SendScreenConfigConsecutiveFrames(ScreenConfigs.PinConfig_Part3);
                     SendingState2 = SendingPinsStates.WAIT_ACK_P3;
-                    progressBar.PerformStep();
                     break;
 
                 case SendingPinsStates.WAIT_ACK_P3:
@@ -558,7 +549,6 @@ namespace Nanni_ScreenConfigurator
                     {
                         SendingState2 = SendingPinsStates.SEND_START_FRAME_P4;
                         progressBar.PerformStep();
-
                         Debug.WriteLine(" --- Reached State 14: Part3 Sent ---");
                     }
                     break;
@@ -570,7 +560,6 @@ namespace Nanni_ScreenConfigurator
                     can.Byte4 = 0x47;
                     can.SendConfigStartFrame(StartingFrame4);
                     SendingState2 = SendingPinsStates.WAIT_START_FRAME_ANSWER_P4;
-                    progressBar.PerformStep();
                     break;
 
                 case SendingPinsStates.WAIT_START_FRAME_ANSWER_P4:
@@ -578,14 +567,12 @@ namespace Nanni_ScreenConfigurator
                     if (gotFrameAnswer4)
                     {
                         SendingState2 = SendingPinsStates.SEND_CONFIG_P4;
-                        progressBar.PerformStep();
                     }
                     break;
 
                 case SendingPinsStates.SEND_CONFIG_P4:
                     can.SendScreenConfigConsecutiveFrames(ScreenConfigs.PinConfig_Part4);
                     SendingState2 = SendingPinsStates.WAIT_ACK_P4;
-                    progressBar.PerformStep();
                     break;
 
                 case SendingPinsStates.WAIT_ACK_P4:
@@ -594,17 +581,14 @@ namespace Nanni_ScreenConfigurator
                     {
                         SendingState2 = SendingPinsStates.DONE;
                         progressBar.PerformStep();
-
                         Debug.WriteLine(" --- Reached State 15: Part4 Sent ---");
                     }
                     break;
 
-
-
                 case SendingPinsStates.DONE:
                     Debug.WriteLine(" --- Reached State 16: Succesfully Finished ---");
-                    stopConfigSendingProcess(hardStop: true);
                     progressBar.PerformStep();
+                    stopConfigSendingProcess(hardStop: true);
                     break;
 
                 default:
