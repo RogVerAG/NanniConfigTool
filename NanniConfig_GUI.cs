@@ -57,6 +57,20 @@ namespace Nanni_ScreenConfigurator
             DONE
         }
 
+        private enum ProcessStates
+        {
+            OFF,
+            IN_PROGRESS,
+            SUCCESS,
+            FAIL
+        }
+
+        private enum ConfigSteps
+        {
+            SCREENS,
+            PINS,
+            DEFAULT
+        }
 
         private readonly CAN can = new();                // Instance of CAN-class
         private readonly Dictionary<int, t_ProductInformation> OL43List = new();
@@ -66,6 +80,7 @@ namespace Nanni_ScreenConfigurator
         private int TimeoutCounter = 0;
         private int CurrentTargetAdr = -1;
         private int CurrentConfigNr = -1;
+        private ConfigSteps CurrentConfigStep;
 
         private readonly NanniConfigurations ScreenConfigs = new();
         #endregion
@@ -193,6 +208,18 @@ namespace Nanni_ScreenConfigurator
                 return false;
             }
         }
+
+        private void tmr_GuiDelays_Tick(object sender, EventArgs e)
+        {
+            tmr_GuiDelays.Enabled = false;
+            tmr_GuiDelays.Stop();
+            this.UseWaitCursor = false;             // no idea why both are required to get the cursor to update immediately ?
+            Cursor.Current = Cursors.Default;
+            if (OL43List.Count > 0)
+            {
+                cb_Display.DroppedDown = true;
+            }
+        }
         #endregion
 
         #region Sending
@@ -254,27 +281,29 @@ namespace Nanni_ScreenConfigurator
 
         private void startSendingScreenConfiguration()
         {
+            CurrentConfigStep = ConfigSteps.SCREENS;
             SendingState1 = SendingScreenStates.ENABLE_UDS;
             can.setCanState(4);     // state 4 = NanniConfigSending
-            tmr_SendScreenConfigStateMachine.Enabled = true;
-            tmr_SendScreenConfigStateMachine.Start();
+            TimeoutCounter = 40;
+            tmr_SendingStateMachine.Enabled = true;
+            tmr_SendingStateMachine.Start();
+            changeStatusLabel(ProcessStates.IN_PROGRESS);
         }
 
         private void startSendingPinConfiguration()
         {
+            CurrentConfigStep = ConfigSteps.PINS;
             SendingState2 = SendingPinsStates.ENABLE_UDS;
             can.setCanState(4);     // state 4 = NanniConfigSending
-            tmr_SendPinConfigStateMachine.Enabled = true;
-            tmr_SendPinConfigStateMachine.Start();
+            TimeoutCounter = 40;
+            tmr_SendingStateMachine.Enabled = true;
+            tmr_SendingStateMachine.Start();
         }
 
         private void stopConfigSendingProcess(bool hardStop = false)
         {
             SendingState1 = SendingScreenStates.DEFAULT;
-            tmr_SendScreenConfigStateMachine.Stop();
-            tmr_SendScreenConfigStateMachine.Enabled = false;
-            tmr_SendPinConfigStateMachine.Stop();
-            tmr_SendPinConfigStateMachine.Enabled = false;
+            StopTimer(tmr_SendingStateMachine);
             TimeoutCounter = 0;
             can.resetProcessAnswers();  // make sure, flaggs are reset
 
@@ -287,17 +316,68 @@ namespace Nanni_ScreenConfigurator
             }
         }
 
-        private void tmr_SendScreenConfigStateMachine_Tick(object sender, EventArgs e)
+        private void changeStatusLabel(ProcessStates state)
+        {
+            switch (state)
+            {
+                case ProcessStates.OFF:
+                    lb_SendingStatus.Visible = false;
+                    break;
+                case ProcessStates.IN_PROGRESS:
+                    lb_SendingStatus.Text = "In Progress";
+                    lb_SendingStatus.ForeColor = Color.Orange;
+                    lb_SendingStatus.Visible = true;
+                    break;
+                case ProcessStates.SUCCESS:
+                    lb_SendingStatus.Text = "Success";
+                    lb_SendingStatus.ForeColor = Color.Green;
+                    lb_SendingStatus.Visible = true;
+                    break;
+                case ProcessStates.FAIL:
+                    lb_SendingStatus.Text = "Failed";
+                    lb_SendingStatus.ForeColor = Color.Red;
+                    lb_SendingStatus.Visible = true;
+                    break;
+            }
+        }
+
+        public void FailExitSendingProcess(string Error)
+        {
+            changeStatusLabel(ProcessStates.FAIL);
+            stopConfigSendingProcess(hardStop: true);
+            progressBar.Value = 0;
+            MessageBox.Show(Error, "FAIL", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        private void StopTimer(System.Windows.Forms.Timer tmr)
+        {
+            tmr.Stop();
+            tmr.Enabled = false;
+        }
+
+        private void tmr_SendingStateMachine_Tick(object sender, EventArgs e)
         {
             if (TimeoutCounter > 0)
             {
                 if (--TimeoutCounter == 0)
                 {
-                    stopConfigSendingProcess(hardStop: true);
-                    MessageBox.Show("Timeout", "No answer from device", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    FailExitSendingProcess("Timeout Error");
                 }
             }
 
+            switch (CurrentConfigStep)
+            {
+                case ConfigSteps.SCREENS:
+                    ScreenConfig_StateMachine();
+                    break;
+                case ConfigSteps.PINS:
+                    PinConfig_StateMachine();
+                    break;
+            }
+        }
+
+        private void ScreenConfig_StateMachine()
+        {
             switch (SendingState1)
             {
                 case SendingScreenStates.ENABLE_UDS:
@@ -330,8 +410,8 @@ namespace Nanni_ScreenConfigurator
                     if (Ackn_ExtDiagSession)
                     {
                         SendingState1 = SendingScreenStates.SEND_START_FRAME;
+                        progressBar.PerformStep();
                     }
-                    progressBar.PerformStep();
                     break;
 
                 case SendingScreenStates.SEND_START_FRAME:
@@ -388,41 +468,13 @@ namespace Nanni_ScreenConfigurator
                     break;
 
                 default:
-                    Debug.WriteLine("Error C004: Non-Expected Switch state");
-                    CurrentTargetAdr = -1;
+                    FailExitSendingProcess("Unexpected Status");
                     break;
             }
         }
 
-        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        private void PinConfig_StateMachine()
         {
-            can.TerminateCanBusConnection();
-        }
-
-
-        private void tmr_GuiDelays_Tick(object sender, EventArgs e)
-        {
-            tmr_GuiDelays.Enabled = false;
-            tmr_GuiDelays.Stop();
-            this.UseWaitCursor = false;             // no idea why both are required to get the cursor to update immediately ?
-            Cursor.Current = Cursors.Default;
-            if (OL43List.Count > 0)
-            {
-                cb_Display.DroppedDown = true;
-            }
-        }
-
-        private void tmr_SendPinConfigStateMachine_Tick(object sender, EventArgs e)
-        {
-            if (TimeoutCounter > 0)
-            {
-                if (--TimeoutCounter == 0)
-                {
-                    stopConfigSendingProcess(hardStop: true);
-                    MessageBox.Show("Timeout", "No answer from device", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
-
             switch (SendingState2)
             {
                 case SendingPinsStates.ENABLE_UDS:
@@ -431,7 +483,7 @@ namespace Nanni_ScreenConfigurator
                     if (Result == false)
                     {
                         MessageBox.Show("CAN Error", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        return;
+                        FailExitSendingProcess("CAN Error");
                     }
                     SendingState2 = SendingPinsStates.EXTEND_DIAG_SESSION;
                     progressBar.PerformStep();
@@ -443,6 +495,7 @@ namespace Nanni_ScreenConfigurator
                     if (r1 == false)
                     {
                         Debug.WriteLine("CAN ERROR");
+                        FailExitSendingProcess("CAN Error");
                     }
                     SendingState2 = SendingPinsStates.WAIT_UDS_EXTEND;
                     progressBar.PerformStep();
@@ -454,8 +507,8 @@ namespace Nanni_ScreenConfigurator
                     if (Ackn_ExtDiagSession)
                     {
                         SendingState2 = SendingPinsStates.SEND_START_FRAME_P1;
+                        progressBar.PerformStep();
                     }
-                    progressBar.PerformStep();
                     break;
 
 
@@ -589,14 +642,22 @@ namespace Nanni_ScreenConfigurator
                     Debug.WriteLine(" --- Reached State 16: Succesfully Finished ---");
                     progressBar.PerformStep();
                     stopConfigSendingProcess(hardStop: true);
+                    changeStatusLabel(ProcessStates.SUCCESS);
                     break;
 
                 default:
                     Debug.WriteLine("Error C004: Non-Expected Switch state");
-                    CurrentTargetAdr = -1;
+                    FailExitSendingProcess("Unexpected State");
                     break;
             }
         }
+
+        #endregion
+
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            can.TerminateCanBusConnection();
+        }
+
     }
-    #endregion
 }

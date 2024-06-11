@@ -37,10 +37,10 @@
             cb_Display = new ComboBox();
             cb_Engines = new ComboBox();
             tmr_WaitForDevices = new System.Windows.Forms.Timer(components);
-            tmr_SendScreenConfigStateMachine = new System.Windows.Forms.Timer(components);
+            tmr_SendingStateMachine = new System.Windows.Forms.Timer(components);
             progressBar = new ProgressBar();
             tmr_GuiDelays = new System.Windows.Forms.Timer(components);
-            tmr_SendPinConfigStateMachine = new System.Windows.Forms.Timer(components);
+            lb_SendingStatus = new Label();
             SuspendLayout();
             // 
             // bt_Refresh
@@ -108,9 +108,9 @@
             // 
             tmr_WaitForDevices.Tick += tmr_WaitForDevices_Tick;
             // 
-            // tmr_SendScreenConfigStateMachine
+            // tmr_SendingStateMachine
             // 
-            tmr_SendScreenConfigStateMachine.Tick += tmr_SendScreenConfigStateMachine_Tick;
+            tmr_SendingStateMachine.Tick += tmr_SendingStateMachine_Tick;
             // 
             // progressBar
             // 
@@ -126,15 +126,22 @@
             tmr_GuiDelays.Interval = 1000;
             tmr_GuiDelays.Tick += tmr_GuiDelays_Tick;
             // 
-            // tmr_SendPinConfigStateMachine
+            // lb_SendingStatus
             // 
-            tmr_SendPinConfigStateMachine.Tick += tmr_SendPinConfigStateMachine_Tick;
+            lb_SendingStatus.AutoSize = true;
+            lb_SendingStatus.Location = new Point(17, 203);
+            lb_SendingStatus.Name = "lb_SendingStatus";
+            lb_SendingStatus.Size = new Size(39, 15);
+            lb_SendingStatus.TabIndex = 6;
+            lb_SendingStatus.Text = "Status";
+            lb_SendingStatus.Visible = false;
             // 
             // NanniConfig_GUI
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(437, 242);
+            Controls.Add(lb_SendingStatus);
             Controls.Add(progressBar);
             Controls.Add(cb_Engines);
             Controls.Add(cb_Display);
@@ -160,9 +167,9 @@
         private ComboBox cb_Display;
         private ComboBox cb_Engines;
         private System.Windows.Forms.Timer tmr_WaitForDevices;
-        private System.Windows.Forms.Timer tmr_SendScreenConfigStateMachine;
+        private System.Windows.Forms.Timer tmr_SendingStateMachine;
         private ProgressBar progressBar;
         private System.Windows.Forms.Timer tmr_GuiDelays;
-        private System.Windows.Forms.Timer tmr_SendPinConfigStateMachine;
+        private Label lb_SendingStatus;
     }
 }
