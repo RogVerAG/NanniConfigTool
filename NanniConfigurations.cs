@@ -9,6 +9,7 @@ namespace Nanni_ScreenConfigurator
 {
     internal class NanniConfigurations
     {
+        private const byte EngTwoOffset = 46;
         private readonly Dictionary<int, List<byte>> ScreenConfigMessages = new();
         public readonly Dictionary<int, int> PPRevConfigValues = new()
         {
@@ -30,9 +31,18 @@ namespace Nanni_ScreenConfigurator
 
         public NanniConfigurations()
         {
-            AddConfig01();
-            AddConfig02();
-            AddConfig03();
+            ScreenConfigMessages.Add( 1, ScrConfig01);
+            ScreenConfigMessages.Add( 2, ScrConfig02);
+            ScreenConfigMessages.Add( 3, ScrConfig01);
+            ScreenConfigMessages.Add( 4, ScrConfig04);
+            ScreenConfigMessages.Add( 5, ScrConfig05);
+            ScreenConfigMessages.Add( 6, ScrConfig04);
+            ScreenConfigMessages.Add( 7, ScrConfig01);
+            ScreenConfigMessages.Add( 8, ScrConfig02);
+            ScreenConfigMessages.Add( 9, ScrConfig01);
+            ScreenConfigMessages.Add(10, ScrConfig04);
+            ScreenConfigMessages.Add(11, ScrConfig05);
+            ScreenConfigMessages.Add(12, ScrConfig04);
         }
 
         #region Getters
@@ -70,117 +80,189 @@ namespace Nanni_ScreenConfigurator
         #endregion
 
         #region ScreenConfig_Definitions
-        private void AddConfig01()
+        private readonly List<byte> ScrConfig01 = new()
         {
-            List<byte> Config01 = new()
-            {
-                0x02,   // scr1 - screen type: 2=bar
-                0x01,   // scr1 - engine1 rpm 
-                0x05,   // scr1 - engine1 battery
+            0x02,   // scr1 - screen type: 2=bar
+            0x01,   // scr1 - engine1 rpm 
+            0x08,   // scr1 - engine1 oil Press (! not same code as on data screens !)
 
-                0x21,
-                0x04,   // scr1 - engine1 coolant temp
-                0x07,   // scr1 - engine1 fuel level    --> SCREEN ONE FINISHED
-                0x03,   // scr2 - screen type: 3=triple
-                0x01,   // scr2 - upper = eng1-RPM
-                0x00,
-                0x00,
-                0x00,
+            0x21,
+            0x04,   // scr1 - engine1 coolant temp
+            0x05,   // scr1 - engine1 battery voltage
+            0x04,   // scr2 - screen type: 4 = Quad
+            0x01,   // scr2 - upper left = eng1-RPM
+            0x00,
+            0x00,
+            0x00,
 
-                0x22,
-                0x03,   // scr3 - screen type: 3=triple
-                0x01,   // scr3 - upper = eng1-rpm
-                0x00,
-                0x00,
-                0x0A,   // scr2 - lower left = eng1-oil press
-                0x01,   // scr4 - screen type: 1=single
-                0x05,   // scr4 - engine1 battery
+            0x22,
+            0x04,   // scr3 - screen type: 4= quad  &&  scr2 - upper right = coolant
+            0x01,   // scr3 - upper = eng1-rpm
+            0x00,
+            0x00,
+            0x0A,   // scr2 - lower left = eng1-oil press
+            0x00,   
+            0x00,   
 
-                0x23,
-                0x00,
-                0x04,   // scr2 - lower right = coolant
-                0x10,   // scr3 - lower left = fuel level
-                0x00,
-                0x00,
-                0x00,
-                0x0D,   // scr3 - lower rigt = eng1-hours
+            0x23,
+            0x00,
+            0x05,   // scr2 - lower right = battery voltage
+            0x10,   // scr3 - lower left = fuel level
+            0x00,   
+            0x00,   
+            0x00,
+            0x0D,   // scr3 - lower rigt = eng1-hours
 
-                0x24,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
+            0x24,  0x00,   0x00,   0x00,   0x00,   0x00,   0x00,   0x00,
+            0x25,  0x00,   0x00,   0x00,   0x00,   0x00,   0x00,   0x00,
+            0x26,  0x00,   0x00,   0x00,   0x00,   0x00,   0x00,   0x00,
+            0x27,  0x00,   0x00,   0x00,   0x00,   0x00,   0x00
+        };
 
-                0x25,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-
-                0x26,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-
-                0x27,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00,
-                0x00
-            };
-
-            ScreenConfigMessages.Add(1, Config01);
-        }
-
-        private void AddConfig02()
+        private readonly List<byte> ScrConfig02 = new()
         {
-            List<byte> Config = new List<byte>();
+            0x02,   // scr1 - screen type: 2=bar
+            0x01,   // scr1 - engine1 rpm 
+            0x08,   // scr1 - engine1 oil Press (! not same code as on data screens !)
 
-            /*Config01.Add(0x02);
-            Config.Add(0x02);
-            Config.Add(0x02);
+            0x21,
+            0x04,   // scr1 - engine1 coolant temp
+            0x05,   // scr1 - engine1 battery voltage
+            0x04,   // scr2 - screen type: 4 = Quad
+            0x01,   // scr2 - upper left = eng1-RPM
+            0x00,
+            0x00,
+            0x00,
 
-            Config.Add(0x);
-            Config.Add(0x);
-            Config.Add(0x);
-            Config.Add(0x);
-            Config.Add(0x);
-            Config.Add(0x);
-            Config.Add(0x);
-            Config.Add(0x);*/
-            ScreenConfigMessages.Add(2, Config);
-        }
+            0x22,
+            0x04,   // scr3 - screen type: 4= quad  &&  scr2 - upper right = coolant
+            0x01,   // scr3 - upper = eng1-rpm
+            0x00,
+            0x00,
+            0x0A,   // scr2 - lower left = eng1-oil press
+            0x04,   // scr4 - screen type: 4 = quad   &&  scr3 upper right
+            0x03,   // scr4 - upper left = boost
 
-        private void AddConfig03()
+            0x23,
+            0x00,
+            0x05,   // scr2 - lower right = battery voltage
+            0x10,   // scr3 - lower left = fuel level
+            0x01,   // scr4 - upper right = rpm   &&  scr5 = single
+            0x01,   // scr5 = rpm
+            0x00,
+            0x0D,   // scr3 - lower rigt = eng1-hours
+
+            0x24,
+            0x06,   // scr 4 - 6 = fuel rate
+            0x00,
+            0x00,
+            0x00,
+            0x07,   // scr 4 - 7 = engine load
+            0x00,
+            0x00,
+
+            0x25,  0x00,    0x00,   0x00,   0x00,   0x00,   0x00,   0x00,
+            0x26,  0x00,    0x00,   0x00,   0x00,   0x00,   0x00,   0x00,
+            0x27,  0x00,   0x00,   0x00,   0x00,   0x00,   0x00
+        };
+
+        // ScrConfig03 = ScrConfig 01
+
+        private readonly List<byte> ScrConfig04 = new()
         {
-            List<byte> Config = new List<byte>();
+            0x02,   // scr1 - screen type: 2=bar
+            0x01+EngTwoOffset,   // scr1 - engine1 rpm 
+            0x08+EngTwoOffset,   // scr1 - engine1 oil Press (! not same code as on data screens !)
 
-            /*Config.Add(0x02);
-            Config.Add(0x02);
-            Config.Add(0x02);
+            0x21,
+            0x04+EngTwoOffset,   // scr1 - engine1 coolant temp
+            0x05+EngTwoOffset,   // scr1 - engine1 battery voltage
+            0x03,                // scr2 - screen type: 3 = triple
+            0x01+EngTwoOffset,   // scr2 - upper left = eng1-RPM
+            0x00,
+            0x00,
+            0x00,
 
-            Config.Add(0x);
-            Config.Add(0x);
-            Config.Add(0x);
-            Config.Add(0x);
-            Config.Add(0x);
-            Config.Add(0x);
-            Config.Add(0x);
-            Config.Add(0x);*/
-            ScreenConfigMessages.Add(3, Config);
-        }
+            0x22,
+            0x03,                // scr3 - screen type: 3= triple
+            0x01+EngTwoOffset,   // scr3 - upper = eng1-rpm
+            0x00,
+            0x00,
+            0x0A+EngTwoOffset,   // scr2 - lower left = eng1-oil press
+            0x01,                // scr4 = single
+            0x05+EngTwoOffset,   // scr4 = battey voltage
+
+            0x23,
+            0x00,
+            0x04+EngTwoOffset,   // scr2 - lower right = coolant
+            0x3F,                // scr3 - lower left = fuel level 2
+            0x00,
+            0x00,
+            0x00,
+            0x0D+EngTwoOffset,   // scr3 - lower rigt = eng1-hours
+
+            0x24,  0x00,   0x00,   0x00,   0x00,   0x00,   0x00,   0x00,
+            0x25,  0x00,   0x00,   0x00,   0x00,   0x00,   0x00,   0x00,
+            0x26,  0x00,   0x00,   0x00,   0x00,   0x00,   0x00,   0x00,
+            0x27,  0x00,   0x00,   0x00,   0x00,   0x00,   0x00
+        };
+
+        private readonly List<byte> ScrConfig05 = new()
+        {
+            0x02,   // scr1 - screen type: 2=bar
+            0x01+EngTwoOffset,   // scr1 - engine1 rpm 
+            0x08+EngTwoOffset,   // scr1 - engine1 oil Press (! not same code as on data screens !)
+
+            0x21,
+            0x04+EngTwoOffset,   // scr1 - engine1 coolant temp
+            0x05+EngTwoOffset,   // scr1 - engine1 battery voltage
+            0x03,                // scr2 - screen type: 3 = triple
+            0x01+EngTwoOffset,   // scr2 - upper left = eng1-RPM
+            0x00,
+            0x00,
+            0x00,
+
+            0x22,
+            0x03,                // scr3 - screen type: 3= triple
+            0x01+EngTwoOffset,   // scr3 - upper = eng1-rpm
+            0x00,
+            0x00,
+            0x0A+EngTwoOffset,   // scr2 - lower left = eng1-oil press
+            0x03,                // scr4 = triple
+            0x01+EngTwoOffset,   // scr4 = upper left = rpm
+
+            0x23,
+            0x00,
+            0x04+EngTwoOffset,   // scr2 - lower right = coolant
+            0x3F,                // scr3 - lower left = fuel level 2
+            0x03,                // scr5 - triple
+            0x01+EngTwoOffset,   // scr5 - upper = rpm
+            0x00,
+            0x0D+EngTwoOffset,   // scr3 - lower rigt = eng1-hours
+
+            0x24,  
+            0x06+EngTwoOffset,   // scr4 lower left - fuel rate
+            0x00,
+            0x00,
+            0x00,   
+            0x07+EngTwoOffset,   // scr4 lower right - engine load
+            0x05+EngTwoOffset,   // scr5 - battery voltage   
+            0x00, 
+
+            0x25,
+            0x00,
+            0x00,   
+            0x03+EngTwoOffset,   // scr5 - boost   
+            0x00,    
+            0x00,   
+            0x00,   
+            0x00,
+
+            0x26,  0x00,   0x00,   0x00,   0x00,   0x00,   0x00,   0x00,
+            0x27,  0x00,   0x00,   0x00,   0x00,   0x00,   0x00
+        };
+
+
         #endregion
 
         #region PinConfig_Definitions

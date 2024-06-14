@@ -41,6 +41,7 @@
             progressBar = new ProgressBar();
             tmr_GuiDelays = new System.Windows.Forms.Timer(components);
             lb_SendingStatus = new Label();
+            label3 = new Label();
             SuspendLayout();
             // 
             // bt_Refresh
@@ -136,11 +137,22 @@
             lb_SendingStatus.Text = "Status";
             lb_SendingStatus.Visible = false;
             // 
+            // label3
+            // 
+            label3.AutoSize = true;
+            label3.ForeColor = Color.Red;
+            label3.Location = new Point(204, 9);
+            label3.Name = "label3";
+            label3.Size = new Size(221, 15);
+            label3.TabIndex = 7;
+            label3.Text = "V0.1 - contains only limited functionality";
+            // 
             // NanniConfig_GUI
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(437, 242);
+            ClientSize = new Size(437, 243);
+            Controls.Add(label3);
             Controls.Add(lb_SendingStatus);
             Controls.Add(progressBar);
             Controls.Add(cb_Engines);
@@ -171,5 +183,6 @@
         private ProgressBar progressBar;
         private System.Windows.Forms.Timer tmr_GuiDelays;
         private Label lb_SendingStatus;
+        private Label label3;
     }
 }

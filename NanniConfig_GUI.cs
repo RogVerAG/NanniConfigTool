@@ -91,7 +91,22 @@ namespace Nanni_ScreenConfigurator
         public NanniConfig_GUI()
         {
             InitializeComponent();
-            InitializeKvaserInterface();
+            try
+            {
+                InitializeKvaserInterface();
+            }
+            catch (Exception)
+            {
+                //Exceptions can only been thrown by KvaserAPI -> can occur, when drivers have not been installed on user computer
+                MessageBox.Show(this,
+                    "An Error occured on starting the CAN communication\n" +
+                    "Make sure the Kvaser Drivers are installed",
+                    "Exception caught",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
+                this.Close();
+            }
         }
 
         private void InitializeKvaserInterface()
@@ -175,10 +190,10 @@ namespace Nanni_ScreenConfigurator
                 tmr_WaitForDevices.Interval = 2000;
             }
         }
-        
+
         public void CancelRunningSendingProcess()
         {
-            if(tmr_SendingStateMachine.Enabled)
+            if (tmr_SendingStateMachine.Enabled)
             {
                 stopConfigSendingProcess(hardStop: true);
                 changeStatusLabel(ProcessStates.OFF);
@@ -194,8 +209,9 @@ namespace Nanni_ScreenConfigurator
             Dictionary<int, t_ProductInformation> NewDeviceList = can.getDevices();
             foreach (var Device in NewDeviceList)
             {
-                
-                try{   
+
+                try
+                {
                     // because the device list request sometimes receives invalid characters (STX)
                     // -> causes exception to be thrown in SerialCode convesion
                     // only happens on busy busses - I think
@@ -218,14 +234,14 @@ namespace Nanni_ScreenConfigurator
                         }
                     }
                 }
-                catch(Exception ex)
+                catch (Exception ex)
                 {
                     Debug.WriteLine("----------- CONVERSION ERROR -----------------------");
                     Debug.WriteLine(ex);
                     Debug.WriteLine(Device.Value.SerialCode);
                     continue;
                 }
-                
+
             }
         }
 
@@ -409,7 +425,7 @@ namespace Nanni_ScreenConfigurator
                 case ConfigSteps.FREQUENCY_PINS:
                     sendFrequencyPinsConfig();
                     break;
-               
+
             }
         }
 
@@ -693,12 +709,12 @@ namespace Nanni_ScreenConfigurator
             int pprVal = ScreenConfigs.PPRevConfigValues[CurrentConfigNr];
 
             bool res = can.SendFreqPinConfig(pprVal);
-            if(res == false)
+            if (res == false)
             {
                 FailExitSendingProcess("CAN Error");
                 return;
             }
-            stopConfigSendingProcess(hardStop:true);
+            stopConfigSendingProcess(hardStop: true);
             changeStatusLabel(ProcessStates.SUCCESS);
         }
         #endregion
