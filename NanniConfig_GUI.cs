@@ -20,7 +20,7 @@ namespace Nanni_ScreenConfigurator
     public partial class NanniConfig_GUI : Form
     {
         #region Variables
-        private enum SendingScreenStates
+        private enum SimpleMsgSendingStates
         {
             DEFAULT,
             ENABLE_UDS,
@@ -78,9 +78,10 @@ namespace Nanni_ScreenConfigurator
 
         private readonly CAN can = new();                // Instance of CAN-class
         private readonly Dictionary<int, t_ProductInformation> OL43List = new();
-        private SendingScreenStates SendingState1 = SendingScreenStates.DEFAULT;
-        private SendingPinsStates SendingState2 = SendingPinsStates.DEFAULT;
-        private SendingScreenStates SendingState3 = SendingScreenStates.DEFAULT;
+        private SimpleMsgSendingStates SndStt_ScreenConfig = SimpleMsgSendingStates.DEFAULT;
+        private SendingPinsStates SndStt_PinConfig = SendingPinsStates.DEFAULT;
+        private SimpleMsgSendingStates SndStt_SensorTypeCustom = SimpleMsgSendingStates.DEFAULT;
+        private SimpleMsgSendingStates SndStt_BargraphConfig = SimpleMsgSendingStates.DEFAULT;
         private int SendPinConfigCnt = 0;
         private int TimeoutCounter = 0;
         private int CurrentTargetAdr = -1;
@@ -332,7 +333,7 @@ namespace Nanni_ScreenConfigurator
         private void startSendingScreenConfiguration()
         {
             CurrentConfigStep = ConfigSteps.SCREENS;
-            SendingState1 = SendingScreenStates.ENABLE_UDS;
+            SndStt_ScreenConfig = SimpleMsgSendingStates.ENABLE_UDS;
             can.setCanState(4);     // state 4 = NanniConfigSending
             TimeoutCounter = 40;
             tmr_SendingStateMachine.Enabled = true;
@@ -340,11 +341,12 @@ namespace Nanni_ScreenConfigurator
             changeStatusLabel(ProcessStates.IN_PROGRESS);
         }
 
-        private void startSendingPinConfiguration(string configurationName)
+        private void startSendingPinConfiguration()
         {
-            ScreenConfigs.defineCurrentPinConfig(configurationName);
+            ScreenConfigs.defineCurrentPinConfig("StandardCurves_P8_Coolant120_P9OilPress10");  // currently the only config
+                                                                                                // must implement further getter if there are different configs required
             CurrentConfigStep = ConfigSteps.ANALOG_PINS;
-            SendingState2 = SendingPinsStates.ENABLE_UDS;
+            SndStt_PinConfig = SendingPinsStates.ENABLE_UDS;
             can.setCanState(4);     // state 4 = NanniConfigSending
             TimeoutCounter = 40;
             tmr_SendingStateMachine.Enabled = true;
@@ -354,7 +356,18 @@ namespace Nanni_ScreenConfigurator
         private void startSendingCustomSensorConfiguration()
         {
             CurrentConfigStep = ConfigSteps.CUSTOM_SENSOR_SELECTION;
-            SendingState3 = SendingScreenStates.ENABLE_UDS;     // even though there is no screen sent the same states are required -> use of this enum
+            SndStt_SensorTypeCustom = SimpleMsgSendingStates.ENABLE_UDS;
+            can.setCanState(4);     // state 4 = NanniConfigSending
+            TimeoutCounter = 40;
+            tmr_SendingStateMachine.Enabled = true;
+            tmr_SendingStateMachine.Start();
+            changeStatusLabel(ProcessStates.IN_PROGRESS);
+        }
+
+        private void startSendingBargraphConfiguration()
+        {
+            CurrentConfigStep = ConfigSteps.BARGRAPH_RANGES;
+            SndStt_BargraphConfig = SimpleMsgSendingStates.ENABLE_UDS;
             can.setCanState(4);     // state 4 = NanniConfigSending
             TimeoutCounter = 40;
             tmr_SendingStateMachine.Enabled = true;
@@ -364,7 +377,7 @@ namespace Nanni_ScreenConfigurator
 
         private void stopConfigSendingProcess(bool hardStop = false)
         {
-            SendingState1 = SendingScreenStates.DEFAULT;
+            SndStt_ScreenConfig = SimpleMsgSendingStates.DEFAULT;
             StopTimer(tmr_SendingStateMachine);
             TimeoutCounter = 0;
             can.resetProcessAnswers();  // make sure, flaggs are reset
@@ -435,7 +448,7 @@ namespace Nanni_ScreenConfigurator
                     break;
 
                 case ConfigSteps.CUSTOM_SENSOR_SELECTION:
-                    sendCustomAsSensorType();
+                    CustomAsSensorType_StateMachine();
                     break;
 
                 case ConfigSteps.ANALOG_PINS:
@@ -445,93 +458,94 @@ namespace Nanni_ScreenConfigurator
                 case ConfigSteps.FREQUENCY_PINS:
                     sendFrequencyPinsConfig();
                     break;
+
+                case ConfigSteps.BARGRAPH_RANGES:
+                    BargraphConfig_SateMachine();
+                    break;
             }
         }
 
         private void ScreenConfig_StateMachine()
         {
-            switch (SendingState1)
+            switch (SndStt_ScreenConfig)
             {
-                case SendingScreenStates.ENABLE_UDS:
-                    Debug.WriteLine(" --- Reached State 1: Enable UDS ---");
-                    //GetCtrlVal(panel, PANEL_RNG_DEVICE, &ucSrcAddr);          // !! What is this doing ??? !!!!
+                case SimpleMsgSendingStates.ENABLE_UDS:
+                    //Debug.WriteLine(" --- Reached State 1: Enable UDS ---");
                     bool Result = can.EnableUds(CurrentTargetAdr);
                     if (Result == false)
                     {
                         MessageBox.Show("CAN Error", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
-                    SendingState1 = SendingScreenStates.EXTEND_DIAG_SESSION;
+                    SndStt_ScreenConfig = SimpleMsgSendingStates.EXTEND_DIAG_SESSION;
                     progressBar.PerformStep();
                     break;
 
-                case SendingScreenStates.EXTEND_DIAG_SESSION:
-                    Debug.WriteLine(" --- Reached State 2: Extend Diag Session ---");
+                case SimpleMsgSendingStates.EXTEND_DIAG_SESSION:
+                    //Debug.WriteLine(" --- Reached State 2: Extend Diag Session ---");
                     bool r1 = can.ExtendDiagSession();
                     if (r1 == false)
                     {
                         Debug.WriteLine("CAN ERROR");
                     }
-                    SendingState1 = SendingScreenStates.WAIT_UDS_EXTEND;
+                    SndStt_ScreenConfig = SimpleMsgSendingStates.WAIT_UDS_EXTEND;
                     progressBar.PerformStep();
                     break;
 
-                case SendingScreenStates.WAIT_UDS_EXTEND:
-                    Debug.WriteLine(" --- Reached State 3: Wait for ExtendDiag Answer ---");
+                case SimpleMsgSendingStates.WAIT_UDS_EXTEND:
+                    //Debug.WriteLine(" --- Reached State 3: Wait for ExtendDiag Answer ---");
                     bool Ackn_ExtDiagSession = can.getExtDiagAnswer();
                     if (Ackn_ExtDiagSession)
                     {
-                        SendingState1 = SendingScreenStates.SEND_START_FRAME;
+                        SndStt_ScreenConfig = SimpleMsgSendingStates.SEND_START_FRAME;
                         progressBar.PerformStep();
                     }
                     break;
 
-                case SendingScreenStates.SEND_START_FRAME:
-                    Debug.WriteLine(" --- Reached State 4: Sending start frame ---");
-                    /*can.StartingFrameRecognitionByte2 = 0x2C;
-                    can.StartingFrameRecognitionByte1 = 0x36;*/
+                case SimpleMsgSendingStates.SEND_START_FRAME:
+                    //Debug.WriteLine(" --- Reached State 4: Sending start frame ---");
                     bool r2 = can.SendConfigStartFrame(ScreenConfigs.getScreenConfig_StartingFrame(CurrentConfigNr), 0x36, 0x2C);
                     if (r2 == false)
                     {
                         Debug.WriteLine("Error at state 4");
                     }
-                    SendingState1 = SendingScreenStates.WAIT_START_FRAME_ANSWER;
+                    SndStt_ScreenConfig = SimpleMsgSendingStates.WAIT_START_FRAME_ANSWER;
                     progressBar.PerformStep();
                     break;
 
-                case SendingScreenStates.WAIT_START_FRAME_ANSWER:
-                    Debug.WriteLine(" --- Reached State 5: Wait for answer on startFrame ---");
+                case SimpleMsgSendingStates.WAIT_START_FRAME_ANSWER:
+                    //Debug.WriteLine(" --- Reached State 5: Wait for answer on startFrame ---");
                     bool gotFrameAnswer = can.getFrameAnswer();
                     if (gotFrameAnswer)
                     {
-                        SendingState1 = SendingScreenStates.SEND_CONFIG;
+                        SndStt_ScreenConfig = SimpleMsgSendingStates.SEND_CONFIG;
                         progressBar.PerformStep();
                     }
                     break;
 
-                case SendingScreenStates.SEND_CONFIG:
-                    Debug.WriteLine(" --- Reached State 6: Send entire configuration ---");
+                case SimpleMsgSendingStates.SEND_CONFIG:
+                    //Debug.WriteLine(" --- Reached State 6: Send entire configuration ---");
                     bool r3 = can.SendScreenConfigConsecutiveFrames(ScreenConfigs.getScreenConfig(CurrentConfigNr));
                     if (r3 == false)
                     {
                         Debug.WriteLine("CAN Error");
                     }
-                    SendingState1 = SendingScreenStates.WAIT_ACK;
+                    SndStt_ScreenConfig = SimpleMsgSendingStates.WAIT_ACK;
                     progressBar.PerformStep();
                     break;
 
-                case SendingScreenStates.WAIT_ACK:
-                    Debug.WriteLine(" --- Reached State 7: wait for acknowledge ---");
+                case SimpleMsgSendingStates.WAIT_ACK:
+                    //Debug.WriteLine(" --- Reached State 7: wait for acknowledge ---");
                     bool gotConfigAck = can.getConfigAcknowledgment();
                     if (gotConfigAck)
                     {
-                        SendingState1 = SendingScreenStates.DONE;
+                        SndStt_ScreenConfig = SimpleMsgSendingStates.DONE;
                         progressBar.PerformStep();
                     }
                     break;
 
-                case SendingScreenStates.DONE:
-                    Debug.WriteLine(" --- Reached State 8: Succesfully Finished ---");
+                case SimpleMsgSendingStates.DONE:
+                    //Debug.WriteLine(" --- Reached State 8: Succesfully Finished ---");
                     progressBar.PerformStep();
                     stopConfigSendingProcess(hardStop: false);
                     //Prepare for sending Pin Configurations too
@@ -544,47 +558,47 @@ namespace Nanni_ScreenConfigurator
             }
         }
 
-        private void sendCustomAsSensorType()
+        private void CustomAsSensorType_StateMachine()
         {
             // in order to have a sensor configuration sent via UDS, it's required to have the sensor type "custom" selected.
             // This is not automatically done when sending the configuration. Instead this message is required as well.
-            switch (SendingState3)
+            switch (SndStt_SensorTypeCustom)
             {
-                case SendingScreenStates.ENABLE_UDS:
-                    Debug.WriteLine(" --- Reached State 1: Enable UDS ---");
+                case SimpleMsgSendingStates.ENABLE_UDS:
+                    //Debug.WriteLine(" --- Reached State 1: Enable UDS ---");
                     bool Result = can.EnableUds(CurrentTargetAdr);
                     if (Result == false)
                     {
                         MessageBox.Show("CAN Error", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
-                    SendingState3 = SendingScreenStates.EXTEND_DIAG_SESSION;
+                    SndStt_SensorTypeCustom = SimpleMsgSendingStates.EXTEND_DIAG_SESSION;
                     progressBar.PerformStep();
                     break;
 
-                case SendingScreenStates.EXTEND_DIAG_SESSION:
-                    Debug.WriteLine(" --- Reached State 2: Extend Diag Session ---");
+                case SimpleMsgSendingStates.EXTEND_DIAG_SESSION:
+                    //Debug.WriteLine(" --- Reached State 2: Extend Diag Session ---");
                     bool r1 = can.ExtendDiagSession();
                     if (r1 == false)
                     {
                         Debug.WriteLine("CAN ERROR");
                     }
-                    SendingState3 = SendingScreenStates.WAIT_UDS_EXTEND;
+                    SndStt_SensorTypeCustom = SimpleMsgSendingStates.WAIT_UDS_EXTEND;
                     progressBar.PerformStep();
                     break;
 
-                case SendingScreenStates.WAIT_UDS_EXTEND:
-                    Debug.WriteLine(" --- Reached State 3: Wait for ExtendDiag Answer ---");
+                case SimpleMsgSendingStates.WAIT_UDS_EXTEND:
+                    //Debug.WriteLine(" --- Reached State 3: Wait for ExtendDiag Answer ---");
                     bool Ackn_ExtDiagSession = can.getExtDiagAnswer();
                     if (Ackn_ExtDiagSession)
                     {
-                        SendingState3 = SendingScreenStates.SEND_START_FRAME;
+                        SndStt_SensorTypeCustom = SimpleMsgSendingStates.SEND_START_FRAME;
                         progressBar.PerformStep();
                     }
                     break;
 
-                case SendingScreenStates.SEND_START_FRAME:
-                    Debug.WriteLine(" --- Reached State 4: Sending start frame ---");
+                case SimpleMsgSendingStates.SEND_START_FRAME:
+                    //Debug.WriteLine(" --- Reached State 4: Sending start frame ---");
                     /*can.StartingFrameRecognitionByte1 = 0x2C;
                     can.StartingFrameRecognitionByte2 = 0x3A;*/
                     bool r2 = can.SendConfigStartFrame(ScreenConfigs.getCustomSensor_StartingFrame(), 0x2C, 0x3A);
@@ -592,47 +606,47 @@ namespace Nanni_ScreenConfigurator
                     {
                         Debug.WriteLine("Error at state 4");
                     }
-                    SendingState3 = SendingScreenStates.WAIT_START_FRAME_ANSWER;
+                    SndStt_SensorTypeCustom = SimpleMsgSendingStates.WAIT_START_FRAME_ANSWER;
                     progressBar.PerformStep();
                     break;
 
-                case SendingScreenStates.WAIT_START_FRAME_ANSWER:
-                    Debug.WriteLine(" --- Reached State 5: Wait for answer on startFrame ---");
+                case SimpleMsgSendingStates.WAIT_START_FRAME_ANSWER:
+                    //Debug.WriteLine(" --- Reached State 5: Wait for answer on startFrame ---");
                     bool gotFrameAnswer = can.getFrameAnswer();
                     if (gotFrameAnswer)
                     {
-                        SendingState3 = SendingScreenStates.SEND_CONFIG;
+                        SndStt_SensorTypeCustom = SimpleMsgSendingStates.SEND_CONFIG;
                         progressBar.PerformStep();
                     }
                     break;
 
-                case SendingScreenStates.SEND_CONFIG:
-                    Debug.WriteLine(" --- Reached State 6: Send entire configuration ---");
+                case SimpleMsgSendingStates.SEND_CONFIG:
+                    //Debug.WriteLine(" --- Reached State 6: Send entire configuration ---");
                     bool r3 = can.SendScreenConfigConsecutiveFrames(ScreenConfigs.getCustomSensorMessage());
                     if (r3 == false)
                     {
                         Debug.WriteLine("CAN Error");
                     }
-                    SendingState3 = SendingScreenStates.WAIT_ACK;
+                    SndStt_SensorTypeCustom = SimpleMsgSendingStates.WAIT_ACK;
                     progressBar.PerformStep();
                     break;
 
-                case SendingScreenStates.WAIT_ACK:
-                    Debug.WriteLine(" --- Reached State 7: wait for acknowledge ---");
+                case SimpleMsgSendingStates.WAIT_ACK:
+                    //Debug.WriteLine(" --- Reached State 7: wait for acknowledge ---");
                     bool gotConfigAck = can.getConfigAcknowledgment();
                     if (gotConfigAck)
                     {
-                        SendingState3 = SendingScreenStates.DONE;
+                        SndStt_SensorTypeCustom = SimpleMsgSendingStates.DONE;
                         progressBar.PerformStep();
                     }
                     break;
 
-                case SendingScreenStates.DONE:
-                    Debug.WriteLine(" --- Reached State 8: Succesfully Finished ---");
+                case SimpleMsgSendingStates.DONE:
+                    //Debug.WriteLine(" --- Reached State 8: Succesfully Finished ---");
                     progressBar.PerformStep();
                     stopConfigSendingProcess(hardStop: false);
                     //Prepare for sending Pin Configurations too
-                    startSendingPinConfiguration("StandardCurves_P8_Coolant120_P9OilPress10");
+                    startSendingPinConfiguration();
                     break;
 
                 default:
@@ -643,38 +657,38 @@ namespace Nanni_ScreenConfigurator
 
         private void PinConfig_StateMachine()
         {
-            switch (SendingState2)
+            switch (SndStt_PinConfig)
             {
                 case SendingPinsStates.ENABLE_UDS:
-                    Debug.WriteLine(" --- Reached State 9: Enable UDS ---");
+                    //Debug.WriteLine(" --- Reached State 9: Enable UDS ---");
                     bool Result = can.EnableUds(CurrentTargetAdr);
                     if (Result == false)
                     {
                         MessageBox.Show("CAN Error", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         FailExitSendingProcess("CAN Error");
                     }
-                    SendingState2 = SendingPinsStates.EXTEND_DIAG_SESSION;
+                    SndStt_PinConfig = SendingPinsStates.EXTEND_DIAG_SESSION;
                     progressBar.PerformStep();
                     break;
 
                 case SendingPinsStates.EXTEND_DIAG_SESSION:
-                    Debug.WriteLine(" --- Reached State 10: Extend Diag Session ---");
+                    //Debug.WriteLine(" --- Reached State 10: Extend Diag Session ---");
                     bool r1 = can.ExtendDiagSession();
                     if (r1 == false)
                     {
                         Debug.WriteLine("CAN ERROR");
                         FailExitSendingProcess("CAN Error");
                     }
-                    SendingState2 = SendingPinsStates.WAIT_UDS_EXTEND;
+                    SndStt_PinConfig = SendingPinsStates.WAIT_UDS_EXTEND;
                     progressBar.PerformStep();
                     break;
 
                 case SendingPinsStates.WAIT_UDS_EXTEND:
-                    Debug.WriteLine(" --- Reached State 11: Wait for ExtendDiag Answer ---");
+                    //Debug.WriteLine(" --- Reached State 11: Wait for ExtendDiag Answer ---");
                     bool Ackn_ExtDiagSession = can.getExtDiagAnswer();
                     if (Ackn_ExtDiagSession)
                     {
-                        SendingState2 = SendingPinsStates.SEND_START_FRAME_P1;
+                        SndStt_PinConfig = SendingPinsStates.SEND_START_FRAME_P1;
                         progressBar.PerformStep();
                     }
                     break;
@@ -685,92 +699,88 @@ namespace Nanni_ScreenConfigurator
 
                 case SendingPinsStates.SEND_START_FRAME_P1:
                     var StartingFrame1 = ScreenConfigs.PinConfig_Part1.GetRange(0, 3);
-                    /*can.StartingFrameRecognitionByte1 = 0x19;
-                    can.StartingFrameRecognitionByte2 = 0x44;*/
                     can.SendConfigStartFrame(StartingFrame1, 0x19, 0x44);
-                    SendingState2 = SendingPinsStates.WAIT_START_FRAME_ANSWER_P1;
+                    SndStt_PinConfig = SendingPinsStates.WAIT_START_FRAME_ANSWER_P1;
                     break;
 
                 case SendingPinsStates.WAIT_START_FRAME_ANSWER_P1:
                     bool gotFrameAnswer1 = can.getFrameAnswer();
                     if (gotFrameAnswer1)
                     {
-                        SendingState2 = SendingPinsStates.SEND_CONFIG_P1;
+                        SndStt_PinConfig = SendingPinsStates.SEND_CONFIG_P1;
                     }
                     break;
 
                 case SendingPinsStates.SEND_CONFIG_P1:
                     can.SendScreenConfigConsecutiveFrames(ScreenConfigs.PinConfig_Part1);
-                    SendingState2 = SendingPinsStates.WAIT_ACK_P1;
+                    SndStt_PinConfig = SendingPinsStates.WAIT_ACK_P1;
                     break;
 
                 case SendingPinsStates.WAIT_ACK_P1:
                     bool gotConfigAck1 = can.getConfigAcknowledgment();
                     if (gotConfigAck1)
                     {
-                        SendingState2 = SendingPinsStates.SEND_START_FRAME_P2;
+                        SndStt_PinConfig = SendingPinsStates.SEND_START_FRAME_P2;
                         progressBar.PerformStep();
-                        Debug.WriteLine(" --- Reached State 12: Part1 Sent ---");
+                        //Debug.WriteLine(" --- Reached State 12: Part1 Sent ---");
                     }
                     break;
 
                 case SendingPinsStates.SEND_START_FRAME_P2:
                     var StartingFrame2 = ScreenConfigs.PinConfig_Part2.GetRange(0, 3);
-                    /*can.StartingFrameRecognitionByte2 = 0x45;*/
                     can.SendConfigStartFrame(StartingFrame2, 0x19, 0x45);
-                    SendingState2 = SendingPinsStates.WAIT_START_FRAME_ANSWER_P2;
+                    SndStt_PinConfig = SendingPinsStates.WAIT_START_FRAME_ANSWER_P2;
                     break;
 
                 case SendingPinsStates.WAIT_START_FRAME_ANSWER_P2:
                     bool gotFrameAnswer2 = can.getFrameAnswer();
                     if (gotFrameAnswer2)
                     {
-                        SendingState2 = SendingPinsStates.SEND_CONFIG_P2;
+                        SndStt_PinConfig = SendingPinsStates.SEND_CONFIG_P2;
                     }
                     break;
 
                 case SendingPinsStates.SEND_CONFIG_P2:
                     can.SendScreenConfigConsecutiveFrames(ScreenConfigs.PinConfig_Part2);
-                    SendingState2 = SendingPinsStates.WAIT_ACK_P2;
+                    SndStt_PinConfig = SendingPinsStates.WAIT_ACK_P2;
                     break;
 
                 case SendingPinsStates.WAIT_ACK_P2:
                     bool gotConfigAck2 = can.getConfigAcknowledgment();
                     if (gotConfigAck2)
                     {
-                        SendingState2 = SendingPinsStates.SEND_START_FRAME_P3;
+                        SndStt_PinConfig = SendingPinsStates.SEND_START_FRAME_P3;
                         progressBar.PerformStep();
-                        Debug.WriteLine(" --- Reached State 13: Part2 Sent ---");
+                        //Debug.WriteLine(" --- Reached State 13: Part2 Sent ---");
                     }
                     break;
 
                 case SendingPinsStates.SEND_START_FRAME_P3:
                     var StartingFrame3 = ScreenConfigs.PinConfig_Part3.GetRange(0, 3);
-                    /*can.StartingFrameRecognitionByte2 = 0x46;*/
                     can.SendConfigStartFrame(StartingFrame3, 0x19, 0x46);
-                    SendingState2 = SendingPinsStates.WAIT_START_FRAME_ANSWER_P3;
+                    SndStt_PinConfig = SendingPinsStates.WAIT_START_FRAME_ANSWER_P3;
                     break;
 
                 case SendingPinsStates.WAIT_START_FRAME_ANSWER_P3:
                     bool gotFrameAnswer3 = can.getFrameAnswer();
                     if (gotFrameAnswer3)
                     {
-                        SendingState2 = SendingPinsStates.SEND_CONFIG_P3;
+                        SndStt_PinConfig = SendingPinsStates.SEND_CONFIG_P3;
                     }
                     break;
 
                 case SendingPinsStates.SEND_CONFIG_P3:
                     can.SendScreenConfigConsecutiveFrames(ScreenConfigs.PinConfig_Part3);
-                    SendingState2 = SendingPinsStates.WAIT_ACK_P3;
+                    SndStt_PinConfig = SendingPinsStates.WAIT_ACK_P3;
                     break;
 
                 case SendingPinsStates.WAIT_ACK_P3:
                     bool gotConfigAck3 = can.getConfigAcknowledgment();
                     if (gotConfigAck3)
                     {
-                        SendingState2 = SendingPinsStates.SEND_START_FRAME_P4;
+                        SndStt_PinConfig = SendingPinsStates.SEND_START_FRAME_P4;
                         progressBar.PerformStep();
-                        Debug.WriteLine(" --- Reached State 14: Part3 Sent ---");
+                        //Debug.WriteLine(" --- Reached State 14: Part3 Sent ---");
                     }
                     break;
 
@@ -778,42 +788,41 @@ namespace Nanni_ScreenConfigurator
 
                 case SendingPinsStates.SEND_START_FRAME_P4:
                     var StartingFrame4 = ScreenConfigs.PinConfig_Part4.GetRange(0, 3);
-                    /*can.StartingFrameRecognitionByte2 = 0x47;*/
                     can.SendConfigStartFrame(StartingFrame4, 0x19, 0x47);
-                    SendingState2 = SendingPinsStates.WAIT_START_FRAME_ANSWER_P4;
+                    SndStt_PinConfig = SendingPinsStates.WAIT_START_FRAME_ANSWER_P4;
                     break;
 
                 case SendingPinsStates.WAIT_START_FRAME_ANSWER_P4:
                     bool gotFrameAnswer4 = can.getFrameAnswer();
                     if (gotFrameAnswer4)
                     {
-                        SendingState2 = SendingPinsStates.SEND_CONFIG_P4;
+                        SndStt_PinConfig = SendingPinsStates.SEND_CONFIG_P4;
                     }
                     break;
 
                 case SendingPinsStates.SEND_CONFIG_P4:
                     can.SendScreenConfigConsecutiveFrames(ScreenConfigs.PinConfig_Part4);
-                    SendingState2 = SendingPinsStates.WAIT_ACK_P4;
+                    SndStt_PinConfig = SendingPinsStates.WAIT_ACK_P4;
                     break;
 
                 case SendingPinsStates.WAIT_ACK_P4:
                     bool gotConfigAck4 = can.getConfigAcknowledgment();
                     if (gotConfigAck4)
                     {
-                        SendingState2 = SendingPinsStates.DONE;
+                        SndStt_PinConfig = SendingPinsStates.DONE;
                         progressBar.PerformStep();
-                        Debug.WriteLine(" --- Reached State 15: Part4 Sent ---");
+                        //Debug.WriteLine(" --- Reached State 15: Part4 Sent ---");
                     }
                     break;
 
                 case SendingPinsStates.DONE:
-                    Debug.WriteLine(" --- Reached State 16: Succesfully Finished ---");
+                    //Debug.WriteLine(" --- Reached State 16: Succesfully Finished ---");
                     progressBar.PerformStep();
                     CurrentConfigStep = ConfigSteps.FREQUENCY_PINS;
                     break;
 
                 default:
-                    Debug.WriteLine("Error C004: Non-Expected Switch state");
+                    //Debug.WriteLine("Error C004: Non-Expected Switch state");
                     FailExitSendingProcess("Unexpected State");
                     break;
             }
@@ -829,17 +838,15 @@ namespace Nanni_ScreenConfigurator
                 FailExitSendingProcess("CAN Error");
                 return;
             }
-            stopConfigSendingProcess(hardStop: true);
-            changeStatusLabel(ProcessStates.SUCCESS);
+            stopConfigSendingProcess(hardStop: false);
+            startSendingBargraphConfiguration();
         }
 
-        
-
-        private void sendBargraphConfig()
+        private void BargraphConfig_SateMachine()
         {
-            /*switch (SendingState3)
+            switch (SndStt_BargraphConfig)
             {
-                case SendingScreenStates.ENABLE_UDS:
+                case SimpleMsgSendingStates.ENABLE_UDS:
                     Debug.WriteLine(" --- Reached State 1: Enable UDS ---");
                     bool Result = can.EnableUds(CurrentTargetAdr);
                     if (Result == false)
@@ -847,87 +854,86 @@ namespace Nanni_ScreenConfigurator
                         MessageBox.Show("CAN Error", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                         return;
                     }
-                    SendingState3 = SendingScreenStates.EXTEND_DIAG_SESSION;
+                    SndStt_BargraphConfig = SimpleMsgSendingStates.EXTEND_DIAG_SESSION;
                     progressBar.PerformStep();
                     break;
 
-                case SendingScreenStates.EXTEND_DIAG_SESSION:
+                case SimpleMsgSendingStates.EXTEND_DIAG_SESSION:
                     Debug.WriteLine(" --- Reached State 2: Extend Diag Session ---");
                     bool r1 = can.ExtendDiagSession();
                     if (r1 == false)
                     {
                         Debug.WriteLine("CAN ERROR");
                     }
-                    SendingState3 = SendingScreenStates.WAIT_UDS_EXTEND;
+                    SndStt_BargraphConfig = SimpleMsgSendingStates.WAIT_UDS_EXTEND;
                     progressBar.PerformStep();
                     break;
 
-                case SendingScreenStates.WAIT_UDS_EXTEND:
+                case SimpleMsgSendingStates.WAIT_UDS_EXTEND:
                     Debug.WriteLine(" --- Reached State 3: Wait for ExtendDiag Answer ---");
                     bool Ackn_ExtDiagSession = can.getExtDiagAnswer();
                     if (Ackn_ExtDiagSession)
                     {
-                        SendingState3 = SendingScreenStates.SEND_START_FRAME;
+                        SndStt_BargraphConfig = SimpleMsgSendingStates.SEND_START_FRAME;
                         progressBar.PerformStep();
                     }
                     break;
 
-                case SendingScreenStates.SEND_START_FRAME:
+                case SimpleMsgSendingStates.SEND_START_FRAME:
                     Debug.WriteLine(" --- Reached State 4: Sending start frame ---");
-                    can.SendCustomSensorStartFrame(ScreenConfigs.getScreenConfig_StartingFrame(CurrentConfigNr));
-                    bool r2 = can.SendConfigStartFrame(ScreenConfigs.getScreenConfig_StartingFrame(CurrentConfigNr));
+                    bool r2 = can.SendConfigStartFrame(ScreenConfigs.getBargraph_StartingFrame(CurrentConfigNr), 0x18, 0x3C);
                     if (r2 == false)
                     {
                         Debug.WriteLine("Error at state 4");
                     }
-                    SendingState3 = SendingScreenStates.WAIT_START_FRAME_ANSWER;
+                    SndStt_BargraphConfig = SimpleMsgSendingStates.WAIT_START_FRAME_ANSWER;
                     progressBar.PerformStep();
                     break;
 
-                case SendingScreenStates.WAIT_START_FRAME_ANSWER:
+                case SimpleMsgSendingStates.WAIT_START_FRAME_ANSWER:
                     Debug.WriteLine(" --- Reached State 5: Wait for answer on startFrame ---");
                     bool gotFrameAnswer = can.getFrameAnswer();
                     if (gotFrameAnswer)
                     {
-                        SendingState3 = SendingScreenStates.SEND_CONFIG;
+                        SndStt_BargraphConfig = SimpleMsgSendingStates.SEND_CONFIG;
                         progressBar.PerformStep();
                     }
                     break;
 
-                case SendingScreenStates.SEND_CONFIG:
+                case SimpleMsgSendingStates.SEND_CONFIG:
                     Debug.WriteLine(" --- Reached State 6: Send entire configuration ---");
-                    bool r3 = can.SendScreenConfigConsecutiveFrames(ScreenConfigs.getConfig(CurrentConfigNr));
+                    bool r3 = can.SendScreenConfigConsecutiveFrames(ScreenConfigs.getBargraph_Message(CurrentConfigNr));
                     if (r3 == false)
                     {
                         Debug.WriteLine("CAN Error");
                     }
-                    SendingState3 = SendingScreenStates.WAIT_ACK;
+                    SndStt_BargraphConfig = SimpleMsgSendingStates.WAIT_ACK;
                     progressBar.PerformStep();
                     break;
 
-                case SendingScreenStates.WAIT_ACK:
+                case SimpleMsgSendingStates.WAIT_ACK:
                     Debug.WriteLine(" --- Reached State 7: wait for acknowledge ---");
                     bool gotConfigAck = can.getConfigAcknowledgment();
                     if (gotConfigAck)
                     {
-                        SendingState3 = SendingScreenStates.DONE;
+                        SndStt_BargraphConfig = SimpleMsgSendingStates.DONE;
                         progressBar.PerformStep();
                     }
                     break;
 
-                case SendingScreenStates.DONE:
+                case SimpleMsgSendingStates.DONE:
                     Debug.WriteLine(" --- Reached State 8: Succesfully Finished ---");
                     progressBar.PerformStep();
                     stopConfigSendingProcess(hardStop: false);
                     //Prepare for sending Pin Configurations too
-                    ScreenConfigs.defineCurrentPinConfig("StandardCurves_P8_Coolant120_P9OilPress10");
-                    startSendingPinConfiguration();
+                    stopConfigSendingProcess(hardStop: true);
+                    changeStatusLabel(ProcessStates.SUCCESS);
                     break;
 
                 default:
                     FailExitSendingProcess("Unexpected Status");
                     break;
-            }*/
+            }
         }
         #endregion
 

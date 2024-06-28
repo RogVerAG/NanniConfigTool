@@ -34,6 +34,23 @@ namespace Nanni_ScreenConfigurator
             AssignScreenConfigMessages();
         }
 
+        private Dictionary<int, string> ConfigurationNames = new Dictionary<int, string>()
+        {
+            {1,  "01 - Kubota 12V Scr1 Eng1"},
+            {2,  "02 - TYT/JD 12V Eng1"},
+            {3,  "03 - Kubota 12V Eng1 Scr2"},
+            {4,  "04 - Kubota 12V Eng2 Scr1"},
+            {5,  "05 - TYT/JD 12V Eng2"},
+            {6,  "06 - Kubota 12V Eng2 Scr2"},
+
+            {7,  "07 - Kubota 24V Scr1 Eng1"},
+            {8,  "08 - TYT/JD 24V Eng1"},
+            {9,  "09 - Kubota 24V Eng1 Scr2"},
+            {10, "10 - Kubota 24V Eng2 Scr1"},
+            {11, "11 - TYT/JD 24V Eng2"},
+            {12, "12 - Kubota 24V Eng2 Scr2"}
+        };
+
         #region Getters
         public List<byte> getScreenConfig(int configNr)
         {
@@ -74,6 +91,30 @@ namespace Nanni_ScreenConfigurator
         public List<byte> getCustomSensorMessage()
         {
             return SensorTypeCustom_Message;
+        }
+
+        public List<byte> getBargraph_StartingFrame(int configNr)
+        {
+            if(configNr >= 0 && configNr <= 6)
+            {
+                return BargraphSettings_12V_System.GetRange(0, 3);
+            }
+            else
+            {
+                return BargraphSettings_24V_System.GetRange(0, 3);
+            }
+        }
+
+        public List<byte> getBargraph_Message(int configNr)
+        {
+            if (configNr >= 0 && configNr <= 6)
+            {
+                return BargraphSettings_12V_System;
+            }
+            else
+            {
+                return BargraphSettings_24V_System;
+            }
         }
         #endregion
 
@@ -180,8 +221,6 @@ namespace Nanni_ScreenConfigurator
             0x26,  0x00,    0x00,   0x00,   0x00,   0x00,   0x00,   0x00,
             0x27,  0x00,   0x00,   0x00,   0x00,   0x00,   0x00
         };
-
-        // ScrConfig03 = ScrConfig 01
 
         private readonly List<byte> ScrConfig04 = new()
         {
@@ -329,34 +368,34 @@ namespace Nanni_ScreenConfigurator
         }
 
         // Message for: Sensor-type = "CUSTOM"
-        private static List<byte> SensorTypeCustom_Message = new()
+        private readonly List<byte> SensorTypeCustom_Message = new()
         {
-            12, 0,0,
-            0x20, 0,0,0,0,0,0,0,
-            0x21, 12,0,0,0,0,0,0,
-            0x22, 0,0,0,0,0,0,0,//0,0,0,4,0,0,0,
-            0x23, 0,0,0,0,0,0,0,//0,0,0,0,0,0,4,
-            0x24, 0,0,0,0,0,0,0,
-            0x25, 0,0
+                    12, 0,0,
+            0x20,   0,0,0,0,0,0,0,
+            0x21,   12,0,0,0,0,0,0,
+            0x22,   0,0,0,0,0,0,0,//0,0,0,4,0,0,0,
+            0x23,   0,0,0,0,0,0,0,//0,0,0,0,0,0,4,
+            0x24,   0,0,0,0,0,0,0,
+            0x25,   0,0
         };
         #endregion
 
         #region BargraphConfigs
         private readonly List<byte> BargraphSettings_12V_System = new()
         {
-            0x10, 0x18, 0x2E, 0x01, 0x3C,
-            0x21, 0x00, 0x00, 0x00, 0x00, 0x0/*Oil Press - Low 1*/, 0x0/*Oil Press - Low 2*/, 0x01/*Oil Press - High 1*/,
-            0x22, 0xF4/*Oil Press - High 1*/, 0x0/*Eng Temp - low 1*/, 0x0/*Eng Temp - low 2*/, 0x0/*Eng Temp - High 1*/, 0x0/*Eng Temp - High 2*/, 0x0/*Bat Low 1*/, 0x0/*Bat Low 2*/,
-            0x23, 0x0/*Bat High 1*/, 0x0/*Bat High 2*/, 0x0, 0x0, 0x0, 0x0
+                    0x00, 0x00, 0x00, 
+            0x20,   0x00, 0x0/*Oil Press - Low 1*/, 0x0/*Oil Press - Low 2*/, 0xF4/*Oil Press - High 1*/, 0x01/*Oil Press - High 2*/, 0x28/*Eng Temp - low 1*/, 0x0/*Eng Temp - low 2*/,
+            0x21,   0x64/*Eng Temp - High 1*/, 0x0/*Eng Temp - High 2*/, 0xB/*Bat Low 1*/, 0x0/*Bat Low 2*/,0xE/*Bat High 1*/, 0x0/*Bat High 2*/, 0x0,
+            0x22,   0x0, 0x0, 0x0
         };
+
         private readonly List<byte> BargraphSettings_24V_System = new()
         {
-            0x10, 0x18, 0x2E, 0x01, 0x3C,
-            0x21, 0x00, 0x00, 0x00, 0x00, 0x0/*Oil Press - Low 1*/, 0x0/*Oil Press - Low 2*/, 0x01/*Oil Press - High 1*/,
-            0x22, 0xF4/*Oil Press - High 1*/, 0x0/*Eng Temp - low 1*/, 0x0/*Eng Temp - low 2*/, 0x0/*Eng Temp - High 1*/, 0x0/*Eng Temp - High 2*/, 0x0/*Bat Low 1*/, 0x0/*Bat Low 2*/,
-            0x23, 0x0/*Bat High 1*/, 0x0/*Bat High 2*/, 0x0, 0x0, 0x0, 0x0
+                    0x00, 0x00, 0x00,
+            0x20,   0x00, 0x0/*Oil Press - Low 1*/, 0x0/*Oil Press - Low 2*/, 0xF4/*Oil Press - High 1*/, 0x01/*Oil Press - High 2*/, 0x28/*Eng Temp - low 1*/, 0x0/*Eng Temp - low 2*/,
+            0x21,   0x64/*Eng Temp - High 1*/, 0x0/*Eng Temp - High 2*/, 0xF/*Bat Low 1*/, 0x0/*Bat Low 2*/,0x18/*Bat High 1*/, 0x0/*Bat High 2*/, 0x0,
+            0x22,   0x0, 0x0, 0x0
         };
         #endregion
-
     }
 }
