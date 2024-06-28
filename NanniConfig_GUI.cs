@@ -204,9 +204,6 @@ namespace Nanni_ScreenConfigurator
             }
         }
 
-        /*[GeneratedRegex("^[0-9A-Fa-f]+$")]
-        private static partial Regex HexadecimalRegex();*/
-
         private void UpdateDisplayList()
         {
             Thread.Sleep(400);
@@ -925,8 +922,6 @@ namespace Nanni_ScreenConfigurator
                     Debug.WriteLine(" --- Reached State 8: Succesfully Finished ---");
                     progressBar.PerformStep();
                     stopConfigSendingProcess(hardStop: false);
-                    //Prepare for sending Pin Configurations too
-                    stopConfigSendingProcess(hardStop: false);
                     sendAlarmConfigurations();
                     break;
 
@@ -938,10 +933,17 @@ namespace Nanni_ScreenConfigurator
 
         private void sendAlarmConfigurations()
         {
-            can.SendAlarmConfigurations( ScreenConfigs.getAlarmConfigVals(CurrentConfigNr) );
-            progressBar.PerformStep();
-            stopConfigSendingProcess(hardStop: true);
-            changeStatusLabel(ProcessStates.SUCCESS);
+            bool result = can.SendAlarmConfigurations(ScreenConfigs.getAlarmConfigVals(CurrentConfigNr));
+            if (result == false)
+            {
+                FailExitSendingProcess("Sending Alarm Configurations Failed");
+            }
+            else
+            {
+                progressBar.PerformStep();
+                stopConfigSendingProcess(hardStop: true);
+                changeStatusLabel(ProcessStates.SUCCESS);
+            }
         }
         #endregion
 

@@ -116,7 +116,7 @@
             // progressBar
             // 
             progressBar.Location = new Point(17, 221);
-            progressBar.Maximum = 16;
+            progressBar.Maximum = 32;
             progressBar.Name = "progressBar";
             progressBar.Size = new Size(408, 12);
             progressBar.Step = 1;
