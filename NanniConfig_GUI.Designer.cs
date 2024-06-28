@@ -42,12 +42,14 @@
             tmr_GuiDelays = new System.Windows.Forms.Timer(components);
             lb_SendingStatus = new Label();
             label3 = new Label();
+            pb_CustomerLogo = new PictureBox();
+            ((System.ComponentModel.ISupportInitialize)pb_CustomerLogo).BeginInit();
             SuspendLayout();
             // 
             // bt_Refresh
             // 
             bt_Refresh.Font = new Font("Segoe UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point);
-            bt_Refresh.Location = new Point(241, 55);
+            bt_Refresh.Location = new Point(255, 56);
             bt_Refresh.Name = "bt_Refresh";
             bt_Refresh.Size = new Size(75, 29);
             bt_Refresh.TabIndex = 0;
@@ -58,9 +60,9 @@
             // bt_Write
             // 
             bt_Write.Font = new Font("Segoe UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point);
-            bt_Write.Location = new Point(237, 187);
+            bt_Write.Location = new Point(265, 187);
             bt_Write.Name = "bt_Write";
-            bt_Write.Size = new Size(188, 28);
+            bt_Write.Size = new Size(174, 28);
             bt_Write.TabIndex = 1;
             bt_Write.Text = "Write Config to Display";
             bt_Write.UseVisualStyleBackColor = true;
@@ -88,21 +90,22 @@
             // 
             // cb_Display
             // 
+            cb_Display.DropDownStyle = ComboBoxStyle.DropDownList;
             cb_Display.Font = new Font("Segoe UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point);
             cb_Display.FormattingEnabled = true;
             cb_Display.Location = new Point(17, 56);
             cb_Display.Name = "cb_Display";
-            cb_Display.Size = new Size(210, 28);
+            cb_Display.Size = new Size(232, 28);
             cb_Display.TabIndex = 4;
             // 
             // cb_Engines
             // 
+            cb_Engines.DropDownStyle = ComboBoxStyle.DropDownList;
             cb_Engines.Font = new Font("Segoe UI", 11.25F, FontStyle.Regular, GraphicsUnit.Point);
             cb_Engines.FormattingEnabled = true;
-            cb_Engines.Items.AddRange(new object[] { "Configuration 01", "Configuration 02", "Configuration 03", "Configuration 04", "Configuration 05", "Configuration 06", "Configuration 07", "Configuration 08", "Configuration 09", "Configuration 10", "Configuration 11", "Configuration 12" });
             cb_Engines.Location = new Point(17, 137);
             cb_Engines.Name = "cb_Engines";
-            cb_Engines.Size = new Size(210, 28);
+            cb_Engines.Size = new Size(232, 28);
             cb_Engines.TabIndex = 5;
             // 
             // tmr_WaitForDevices
@@ -118,7 +121,7 @@
             progressBar.Location = new Point(17, 221);
             progressBar.Maximum = 32;
             progressBar.Name = "progressBar";
-            progressBar.Size = new Size(408, 12);
+            progressBar.Size = new Size(422, 10);
             progressBar.Step = 1;
             progressBar.TabIndex = 1;
             // 
@@ -141,17 +144,29 @@
             // 
             label3.AutoSize = true;
             label3.ForeColor = Color.Red;
-            label3.Location = new Point(204, 9);
+            label3.Location = new Point(6, 5);
             label3.Name = "label3";
-            label3.Size = new Size(221, 15);
+            label3.Size = new Size(60, 15);
             label3.TabIndex = 7;
-            label3.Text = "V0.1 - contains only limited functionality";
+            label3.Text = "V0.2 - Test";
+            label3.Visible = false;
+            // 
+            // pb_CustomerLogo
+            // 
+            pb_CustomerLogo.Image = (Image)resources.GetObject("pb_CustomerLogo.Image");
+            pb_CustomerLogo.InitialImage = null;
+            pb_CustomerLogo.Location = new Point(324, 2);
+            pb_CustomerLogo.Name = "pb_CustomerLogo";
+            pb_CustomerLogo.Size = new Size(126, 40);
+            pb_CustomerLogo.TabIndex = 8;
+            pb_CustomerLogo.TabStop = false;
             // 
             // NanniConfig_GUI
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(437, 243);
+            ClientSize = new Size(451, 243);
+            Controls.Add(pb_CustomerLogo);
             Controls.Add(label3);
             Controls.Add(lb_SendingStatus);
             Controls.Add(progressBar);
@@ -164,8 +179,9 @@
             FormBorderStyle = FormBorderStyle.FixedSingle;
             Icon = (Icon)resources.GetObject("$this.Icon");
             Name = "NanniConfig_GUI";
-            Text = "Nanni Screen Configurator";
+            Text = "Nanni Screen Configurator V01.0";
             FormClosing += Form1_FormClosing;
+            ((System.ComponentModel.ISupportInitialize)pb_CustomerLogo).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -184,5 +200,6 @@
         private System.Windows.Forms.Timer tmr_GuiDelays;
         private Label lb_SendingStatus;
         private Label label3;
+        private PictureBox pb_CustomerLogo;
     }
 }

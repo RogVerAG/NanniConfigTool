@@ -20,43 +20,27 @@ namespace Nanni_ScreenConfigurator
             this.CoolantTempHighVal = CoolantTempHighVal;
         }
     }
+
     internal class NanniConfigurations
     {
         private const byte EngTwoOffset = 46;
         private readonly Dictionary<int, List<byte>> ScreenConfigMessages = new();
-        public readonly Dictionary<int, int> PPRevConfigValues = new()
-        {
-            // Key = ConfigNr
-            // Value = Pulses Per revolution * 100 (in order to allow for decimals)
-            {1,  6000},   // Configuration 01 = 60 pprev
-            {2,  6000},   // Configuration 02 = 60 pprev
-            {3,  6000},   // Configuration 03 = 60 pprev
-            {4,  6000},   // Configuration 04 = 60 pprev
-            {5,  6000},   // Configuration 05 = 60 pprev
-            {6,  6000},   // Configuration 06 = 60 pprev
-            {7,  6000},   // Configuration 07 = 60 pprev
-            {8,  6000},   // Configuration 08 = 60 pprev
-            {9,  6000},   // Configuration 09 = 60 pprev
-            {10,  6000},  // Configuration 10 = 60 pprev
-            {11,  6000},  // Configuration 11 = 60 pprev
-            {12,  6000}   // Configuration 12 = 60 pprev
-        };
-
+        
         public NanniConfigurations()
         {
             AssignScreenConfigMessages();
         }
 
-        private Dictionary<int, string> ConfigurationNames = new Dictionary<int, string>()
+        public readonly Dictionary<int, string> ConfigurationNames = new()
         {
-            {1,  "01 - Kubota 12V Scr1 Eng1"},
+            {1,  "01 - Kubota 12V Eng1 Scr1"},
             {2,  "02 - TYT/JD 12V Eng1"},
             {3,  "03 - Kubota 12V Eng1 Scr2"},
             {4,  "04 - Kubota 12V Eng2 Scr1"},
             {5,  "05 - TYT/JD 12V Eng2"},
             {6,  "06 - Kubota 12V Eng2 Scr2"},
 
-            {7,  "07 - Kubota 24V Scr1 Eng1"},
+            {7,  "07 - Kubota 24V Eng1 Scr1"},
             {8,  "08 - TYT/JD 24V Eng1"},
             {9,  "09 - Kubota 24V Eng1 Scr2"},
             {10, "10 - Kubota 24V Eng2 Scr1"},
@@ -331,6 +315,11 @@ namespace Nanni_ScreenConfigurator
         #endregion
 
         #region PinConfig_Definitions
+        public List<byte> PinConfig_Part1 = new();
+        public List<byte> PinConfig_Part2 = new();
+        public List<byte> PinConfig_Part3 = new();
+        public List<byte> PinConfig_Part4 = new();
+
         private readonly List<byte> StandardCurves_P8_Coolant120_P9OilPress10_Part1 = new()
         {
             0x5E, 0x0B, 0x3C,
@@ -360,15 +349,9 @@ namespace Nanni_ScreenConfigurator
             0x23, 0x0, 0x0, 0x0, 0x3, 0xFF
         };
 
-
-
-        public List<byte> PinConfig_Part1 = new();
-        public List<byte> PinConfig_Part2 = new();
-        public List<byte> PinConfig_Part3 = new();
-        public List<byte> PinConfig_Part4 = new();
-
         public void defineCurrentPinConfig(string configName)
         {
+            // currently only this one Configuration prepared. Further configurations can be added if requested
             switch(configName)
             {
                 case "StandardCurves_P8_Coolant120_P9OilPress10":
@@ -379,6 +362,25 @@ namespace Nanni_ScreenConfigurator
                     break;
             }
         }
+
+        public readonly Dictionary<int, int> PPRevConfigValues = new()
+        {
+            // Key = ConfigNr
+            // Value = Pulses Per revolution * 100 (in order to allow for decimals)
+
+            {1,  6000},   // Configuration 01 = 60 pprev
+            {2,  6000},   // Configuration 02 = 60 pprev
+            {3,  6000},   // Configuration 03 = 60 pprev
+            {4,  6000},   // Configuration 04 = 60 pprev
+            {5,  6000},   // Configuration 05 = 60 pprev
+            {6,  6000},   // Configuration 06 = 60 pprev
+            {7,  6000},   // Configuration 07 = 60 pprev
+            {8,  6000},   // Configuration 08 = 60 pprev
+            {9,  6000},   // Configuration 09 = 60 pprev
+            {10,  6000},  // Configuration 10 = 60 pprev
+            {11,  6000},  // Configuration 11 = 60 pprev
+            {12,  6000}   // Configuration 12 = 60 pprev
+        };
 
         // Message for: Sensor-type = "CUSTOM"
         private readonly List<byte> SensorTypeCustom_Message = new()

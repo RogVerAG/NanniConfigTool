@@ -484,6 +484,36 @@ namespace Nanni_ScreenConfigurator
             return true;
         }
 
+        public bool sendResetCommand()
+        {
+            ExtendDiagSession();    //required - otherwise reset not possible.
+            int cnt = 0;
+            while(cnt < 50)
+            {
+                Thread.Sleep(100);
+                if (getExtDiagAnswer())
+                {
+                    break;
+                }
+                cnt++;
+            }
+            if (cnt > 48)
+                return false;
+
+            byte[] data = new byte[3];
+            data[0] = 0x02;
+            data[1] = 0x11;
+            data[2] = 0x01;
+
+            uint dlc = (uint)data.Length;
+            canStatus status = CanlibAPI.canWrite(CanHandle, UDS_TX, data, dlc, CanlibAPI.canMSG_STD);
+            if (status != CanlibAPI.canStatus.canOK)
+            {
+                return false;
+            }
+            return true;
+        }
+
         public bool SendAlarmConfigurations(List<byte> AlarmDescription)
         {
             if (AlarmDescription.Count < 9)
