@@ -71,6 +71,8 @@ namespace Nanni_ScreenConfigurator
             SCREENS,
             ANALOG_PINS,
             FREQUENCY_PINS,
+            CUSTOM_SENSOR_SELECTION,
+            BARGRAPH_RANGES,
             DEFAULT
         }
 
@@ -78,6 +80,7 @@ namespace Nanni_ScreenConfigurator
         private readonly Dictionary<int, t_ProductInformation> OL43List = new();
         private SendingScreenStates SendingState1 = SendingScreenStates.DEFAULT;
         private SendingPinsStates SendingState2 = SendingPinsStates.DEFAULT;
+        private SendingScreenStates SendingState3 = SendingScreenStates.DEFAULT;
         private int SendPinConfigCnt = 0;
         private int TimeoutCounter = 0;
         private int CurrentTargetAdr = -1;
@@ -200,8 +203,8 @@ namespace Nanni_ScreenConfigurator
             }
         }
 
-        [GeneratedRegex("^[0-9A-Fa-f]+$")]
-        private static partial Regex HexadecimalRegex();
+        /*[GeneratedRegex("^[0-9A-Fa-f]+$")]
+        private static partial Regex HexadecimalRegex();*/
 
         private void UpdateDisplayList()
         {
@@ -209,7 +212,6 @@ namespace Nanni_ScreenConfigurator
             Dictionary<int, t_ProductInformation> NewDeviceList = can.getDevices();
             foreach (var Device in NewDeviceList)
             {
-
                 try
                 {
                     // because the device list request sometimes receives invalid characters (STX)
@@ -273,7 +275,7 @@ namespace Nanni_ScreenConfigurator
         #region Sending
         private void startSendingConfiguration(string ConfigName)
         {
-            switch (ConfigName)         // made with a switch, so names can be changed to something different (like Engine type)
+            switch (ConfigName)         // made with a switch, so names can easily be changed to something different (like Engine type)
             {
                 case "Configuration 01":
                     CurrentConfigNr = 1;
@@ -338,14 +340,26 @@ namespace Nanni_ScreenConfigurator
             changeStatusLabel(ProcessStates.IN_PROGRESS);
         }
 
-        private void startSendingPinConfiguration()
+        private void startSendingPinConfiguration(string configurationName)
         {
+            ScreenConfigs.defineCurrentPinConfig(configurationName);
             CurrentConfigStep = ConfigSteps.ANALOG_PINS;
             SendingState2 = SendingPinsStates.ENABLE_UDS;
             can.setCanState(4);     // state 4 = NanniConfigSending
             TimeoutCounter = 40;
             tmr_SendingStateMachine.Enabled = true;
             tmr_SendingStateMachine.Start();
+        }
+
+        private void startSendingCustomSensorConfiguration()
+        {
+            CurrentConfigStep = ConfigSteps.CUSTOM_SENSOR_SELECTION;
+            SendingState3 = SendingScreenStates.ENABLE_UDS;     // even though there is no screen sent the same states are required -> use of this enum
+            can.setCanState(4);     // state 4 = NanniConfigSending
+            TimeoutCounter = 40;
+            tmr_SendingStateMachine.Enabled = true;
+            tmr_SendingStateMachine.Start();
+            changeStatusLabel(ProcessStates.IN_PROGRESS);
         }
 
         private void stopConfigSendingProcess(bool hardStop = false)
@@ -419,13 +433,18 @@ namespace Nanni_ScreenConfigurator
                 case ConfigSteps.SCREENS:
                     ScreenConfig_StateMachine();
                     break;
+
+                case ConfigSteps.CUSTOM_SENSOR_SELECTION:
+                    sendCustomAsSensorType();
+                    break;
+
                 case ConfigSteps.ANALOG_PINS:
                     PinConfig_StateMachine();
                     break;
+
                 case ConfigSteps.FREQUENCY_PINS:
                     sendFrequencyPinsConfig();
                     break;
-
             }
         }
 
@@ -469,9 +488,9 @@ namespace Nanni_ScreenConfigurator
 
                 case SendingScreenStates.SEND_START_FRAME:
                     Debug.WriteLine(" --- Reached State 4: Sending start frame ---");
-                    can.Byte4 = 0x2C;
-                    can.StartingFrameRecognitionByte = 0x36;
-                    bool r2 = can.SendConfigStartFrame(ScreenConfigs.getScreenConfig_StartingFrame(CurrentConfigNr));
+                    /*can.StartingFrameRecognitionByte2 = 0x2C;
+                    can.StartingFrameRecognitionByte1 = 0x36;*/
+                    bool r2 = can.SendConfigStartFrame(ScreenConfigs.getScreenConfig_StartingFrame(CurrentConfigNr), 0x36, 0x2C);
                     if (r2 == false)
                     {
                         Debug.WriteLine("Error at state 4");
@@ -492,7 +511,7 @@ namespace Nanni_ScreenConfigurator
 
                 case SendingScreenStates.SEND_CONFIG:
                     Debug.WriteLine(" --- Reached State 6: Send entire configuration ---");
-                    bool r3 = can.SendScreenConfigConsecutiveFrames(ScreenConfigs.getConfig(CurrentConfigNr));
+                    bool r3 = can.SendScreenConfigConsecutiveFrames(ScreenConfigs.getScreenConfig(CurrentConfigNr));
                     if (r3 == false)
                     {
                         Debug.WriteLine("CAN Error");
@@ -516,8 +535,104 @@ namespace Nanni_ScreenConfigurator
                     progressBar.PerformStep();
                     stopConfigSendingProcess(hardStop: false);
                     //Prepare for sending Pin Configurations too
-                    ScreenConfigs.defineCurrentPinConfig("StandardCurves_P8_Coolant120_P9OilPress10");
-                    startSendingPinConfiguration();
+                    startSendingCustomSensorConfiguration();
+                    break;
+
+                default:
+                    FailExitSendingProcess("Unexpected Status");
+                    break;
+            }
+        }
+
+        private void sendCustomAsSensorType()
+        {
+            // in order to have a sensor configuration sent via UDS, it's required to have the sensor type "custom" selected.
+            // This is not automatically done when sending the configuration. Instead this message is required as well.
+            switch (SendingState3)
+            {
+                case SendingScreenStates.ENABLE_UDS:
+                    Debug.WriteLine(" --- Reached State 1: Enable UDS ---");
+                    bool Result = can.EnableUds(CurrentTargetAdr);
+                    if (Result == false)
+                    {
+                        MessageBox.Show("CAN Error", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+                    SendingState3 = SendingScreenStates.EXTEND_DIAG_SESSION;
+                    progressBar.PerformStep();
+                    break;
+
+                case SendingScreenStates.EXTEND_DIAG_SESSION:
+                    Debug.WriteLine(" --- Reached State 2: Extend Diag Session ---");
+                    bool r1 = can.ExtendDiagSession();
+                    if (r1 == false)
+                    {
+                        Debug.WriteLine("CAN ERROR");
+                    }
+                    SendingState3 = SendingScreenStates.WAIT_UDS_EXTEND;
+                    progressBar.PerformStep();
+                    break;
+
+                case SendingScreenStates.WAIT_UDS_EXTEND:
+                    Debug.WriteLine(" --- Reached State 3: Wait for ExtendDiag Answer ---");
+                    bool Ackn_ExtDiagSession = can.getExtDiagAnswer();
+                    if (Ackn_ExtDiagSession)
+                    {
+                        SendingState3 = SendingScreenStates.SEND_START_FRAME;
+                        progressBar.PerformStep();
+                    }
+                    break;
+
+                case SendingScreenStates.SEND_START_FRAME:
+                    Debug.WriteLine(" --- Reached State 4: Sending start frame ---");
+                    /*can.StartingFrameRecognitionByte1 = 0x2C;
+                    can.StartingFrameRecognitionByte2 = 0x3A;*/
+                    bool r2 = can.SendConfigStartFrame(ScreenConfigs.getCustomSensor_StartingFrame(), 0x2C, 0x3A);
+                    if (r2 == false)
+                    {
+                        Debug.WriteLine("Error at state 4");
+                    }
+                    SendingState3 = SendingScreenStates.WAIT_START_FRAME_ANSWER;
+                    progressBar.PerformStep();
+                    break;
+
+                case SendingScreenStates.WAIT_START_FRAME_ANSWER:
+                    Debug.WriteLine(" --- Reached State 5: Wait for answer on startFrame ---");
+                    bool gotFrameAnswer = can.getFrameAnswer();
+                    if (gotFrameAnswer)
+                    {
+                        SendingState3 = SendingScreenStates.SEND_CONFIG;
+                        progressBar.PerformStep();
+                    }
+                    break;
+
+                case SendingScreenStates.SEND_CONFIG:
+                    Debug.WriteLine(" --- Reached State 6: Send entire configuration ---");
+                    bool r3 = can.SendScreenConfigConsecutiveFrames(ScreenConfigs.getCustomSensorMessage());
+                    if (r3 == false)
+                    {
+                        Debug.WriteLine("CAN Error");
+                    }
+                    SendingState3 = SendingScreenStates.WAIT_ACK;
+                    progressBar.PerformStep();
+                    break;
+
+                case SendingScreenStates.WAIT_ACK:
+                    Debug.WriteLine(" --- Reached State 7: wait for acknowledge ---");
+                    bool gotConfigAck = can.getConfigAcknowledgment();
+                    if (gotConfigAck)
+                    {
+                        SendingState3 = SendingScreenStates.DONE;
+                        progressBar.PerformStep();
+                    }
+                    break;
+
+                case SendingScreenStates.DONE:
+                    Debug.WriteLine(" --- Reached State 8: Succesfully Finished ---");
+                    progressBar.PerformStep();
+                    stopConfigSendingProcess(hardStop: false);
+                    //Prepare for sending Pin Configurations too
+                    startSendingPinConfiguration("StandardCurves_P8_Coolant120_P9OilPress10");
                     break;
 
                 default:
@@ -570,9 +685,9 @@ namespace Nanni_ScreenConfigurator
 
                 case SendingPinsStates.SEND_START_FRAME_P1:
                     var StartingFrame1 = ScreenConfigs.PinConfig_Part1.GetRange(0, 3);
-                    can.Byte4 = 0x44;
-                    can.StartingFrameRecognitionByte = 0x19;
-                    can.SendConfigStartFrame(StartingFrame1);
+                    /*can.StartingFrameRecognitionByte1 = 0x19;
+                    can.StartingFrameRecognitionByte2 = 0x44;*/
+                    can.SendConfigStartFrame(StartingFrame1, 0x19, 0x44);
                     SendingState2 = SendingPinsStates.WAIT_START_FRAME_ANSWER_P1;
                     break;
 
@@ -601,8 +716,8 @@ namespace Nanni_ScreenConfigurator
 
                 case SendingPinsStates.SEND_START_FRAME_P2:
                     var StartingFrame2 = ScreenConfigs.PinConfig_Part2.GetRange(0, 3);
-                    can.Byte4 = 0x45;
-                    can.SendConfigStartFrame(StartingFrame2);
+                    /*can.StartingFrameRecognitionByte2 = 0x45;*/
+                    can.SendConfigStartFrame(StartingFrame2, 0x19, 0x45);
                     SendingState2 = SendingPinsStates.WAIT_START_FRAME_ANSWER_P2;
                     break;
 
@@ -631,8 +746,8 @@ namespace Nanni_ScreenConfigurator
 
                 case SendingPinsStates.SEND_START_FRAME_P3:
                     var StartingFrame3 = ScreenConfigs.PinConfig_Part3.GetRange(0, 3);
-                    can.Byte4 = 0x46;
-                    can.SendConfigStartFrame(StartingFrame3);
+                    /*can.StartingFrameRecognitionByte2 = 0x46;*/
+                    can.SendConfigStartFrame(StartingFrame3, 0x19, 0x46);
                     SendingState2 = SendingPinsStates.WAIT_START_FRAME_ANSWER_P3;
                     break;
 
@@ -663,8 +778,8 @@ namespace Nanni_ScreenConfigurator
 
                 case SendingPinsStates.SEND_START_FRAME_P4:
                     var StartingFrame4 = ScreenConfigs.PinConfig_Part4.GetRange(0, 3);
-                    can.Byte4 = 0x47;
-                    can.SendConfigStartFrame(StartingFrame4);
+                    /*can.StartingFrameRecognitionByte2 = 0x47;*/
+                    can.SendConfigStartFrame(StartingFrame4, 0x19, 0x47);
                     SendingState2 = SendingPinsStates.WAIT_START_FRAME_ANSWER_P4;
                     break;
 
@@ -717,12 +832,108 @@ namespace Nanni_ScreenConfigurator
             stopConfigSendingProcess(hardStop: true);
             changeStatusLabel(ProcessStates.SUCCESS);
         }
+
+        
+
+        private void sendBargraphConfig()
+        {
+            /*switch (SendingState3)
+            {
+                case SendingScreenStates.ENABLE_UDS:
+                    Debug.WriteLine(" --- Reached State 1: Enable UDS ---");
+                    bool Result = can.EnableUds(CurrentTargetAdr);
+                    if (Result == false)
+                    {
+                        MessageBox.Show("CAN Error", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
+                    SendingState3 = SendingScreenStates.EXTEND_DIAG_SESSION;
+                    progressBar.PerformStep();
+                    break;
+
+                case SendingScreenStates.EXTEND_DIAG_SESSION:
+                    Debug.WriteLine(" --- Reached State 2: Extend Diag Session ---");
+                    bool r1 = can.ExtendDiagSession();
+                    if (r1 == false)
+                    {
+                        Debug.WriteLine("CAN ERROR");
+                    }
+                    SendingState3 = SendingScreenStates.WAIT_UDS_EXTEND;
+                    progressBar.PerformStep();
+                    break;
+
+                case SendingScreenStates.WAIT_UDS_EXTEND:
+                    Debug.WriteLine(" --- Reached State 3: Wait for ExtendDiag Answer ---");
+                    bool Ackn_ExtDiagSession = can.getExtDiagAnswer();
+                    if (Ackn_ExtDiagSession)
+                    {
+                        SendingState3 = SendingScreenStates.SEND_START_FRAME;
+                        progressBar.PerformStep();
+                    }
+                    break;
+
+                case SendingScreenStates.SEND_START_FRAME:
+                    Debug.WriteLine(" --- Reached State 4: Sending start frame ---");
+                    can.SendCustomSensorStartFrame(ScreenConfigs.getScreenConfig_StartingFrame(CurrentConfigNr));
+                    bool r2 = can.SendConfigStartFrame(ScreenConfigs.getScreenConfig_StartingFrame(CurrentConfigNr));
+                    if (r2 == false)
+                    {
+                        Debug.WriteLine("Error at state 4");
+                    }
+                    SendingState3 = SendingScreenStates.WAIT_START_FRAME_ANSWER;
+                    progressBar.PerformStep();
+                    break;
+
+                case SendingScreenStates.WAIT_START_FRAME_ANSWER:
+                    Debug.WriteLine(" --- Reached State 5: Wait for answer on startFrame ---");
+                    bool gotFrameAnswer = can.getFrameAnswer();
+                    if (gotFrameAnswer)
+                    {
+                        SendingState3 = SendingScreenStates.SEND_CONFIG;
+                        progressBar.PerformStep();
+                    }
+                    break;
+
+                case SendingScreenStates.SEND_CONFIG:
+                    Debug.WriteLine(" --- Reached State 6: Send entire configuration ---");
+                    bool r3 = can.SendScreenConfigConsecutiveFrames(ScreenConfigs.getConfig(CurrentConfigNr));
+                    if (r3 == false)
+                    {
+                        Debug.WriteLine("CAN Error");
+                    }
+                    SendingState3 = SendingScreenStates.WAIT_ACK;
+                    progressBar.PerformStep();
+                    break;
+
+                case SendingScreenStates.WAIT_ACK:
+                    Debug.WriteLine(" --- Reached State 7: wait for acknowledge ---");
+                    bool gotConfigAck = can.getConfigAcknowledgment();
+                    if (gotConfigAck)
+                    {
+                        SendingState3 = SendingScreenStates.DONE;
+                        progressBar.PerformStep();
+                    }
+                    break;
+
+                case SendingScreenStates.DONE:
+                    Debug.WriteLine(" --- Reached State 8: Succesfully Finished ---");
+                    progressBar.PerformStep();
+                    stopConfigSendingProcess(hardStop: false);
+                    //Prepare for sending Pin Configurations too
+                    ScreenConfigs.defineCurrentPinConfig("StandardCurves_P8_Coolant120_P9OilPress10");
+                    startSendingPinConfiguration();
+                    break;
+
+                default:
+                    FailExitSendingProcess("Unexpected Status");
+                    break;
+            }*/
+        }
         #endregion
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
             can.TerminateCanBusConnection();
         }
-
     }
 }

@@ -47,8 +47,8 @@ namespace Nanni_ScreenConfigurator
         private bool ExtendDiagAnswer = false;
         private bool StartingFrameAnswer = false;
         private bool MessageBlockAcknowledgement = false;
-        public byte Byte4 = 0x00;
-        public byte StartingFrameRecognitionByte = 0x00;
+        private int RecognitionByte2 = 0; //public byte StartingFrameRecognitionByte2 = 0x00;
+        //public byte StartingFrameRecognitionByte1 = 0x00;
 
         #endregion
 
@@ -160,7 +160,7 @@ namespace Nanni_ScreenConfigurator
                                 // frames ansewr
                                 StartingFrameAnswer = true;
                             }
-                            else if (data[0] == 0x03 && data[1] == 0x6E && data[2] == 0x01 && data[3] == Byte4)
+                            else if (data[0] == 0x03 && data[1] == 0x6E && data[2] == 0x01 && data[3] == RecognitionByte2)
                             {
                                 // all written
                                 MessageBlockAcknowledgement = true;
@@ -436,18 +436,19 @@ namespace Nanni_ScreenConfigurator
             return false;
         }
 
-        public bool SendConfigStartFrame(List<byte> StartingFrames)
+        public bool SendConfigStartFrame(List<byte> StartingFrames, byte StartingFrameRecognitionByte1, byte StartingFrameRecognitionByte2)
         {
+            RecognitionByte2 = StartingFrameRecognitionByte2;
             if (StartingFrames.Count < 3)
             {
                 return false;
             }
             byte[] data = new byte[8];
             data[0] = 0x10;
-            data[1] = StartingFrameRecognitionByte;
+            data[1] = StartingFrameRecognitionByte1;
             data[2] = 0x2E;
             data[3] = 0x01;
-            data[4] = Byte4;
+            data[4] = StartingFrameRecognitionByte2;
 
             data[5] = StartingFrames.ElementAt(0);
             data[6] = StartingFrames.ElementAt(1);

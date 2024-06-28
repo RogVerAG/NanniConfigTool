@@ -31,22 +31,11 @@ namespace Nanni_ScreenConfigurator
 
         public NanniConfigurations()
         {
-            ScreenConfigMessages.Add( 1, ScrConfig01);
-            ScreenConfigMessages.Add( 2, ScrConfig02);
-            ScreenConfigMessages.Add( 3, ScrConfig01);
-            ScreenConfigMessages.Add( 4, ScrConfig04);
-            ScreenConfigMessages.Add( 5, ScrConfig05);
-            ScreenConfigMessages.Add( 6, ScrConfig04);
-            ScreenConfigMessages.Add( 7, ScrConfig01);
-            ScreenConfigMessages.Add( 8, ScrConfig02);
-            ScreenConfigMessages.Add( 9, ScrConfig01);
-            ScreenConfigMessages.Add(10, ScrConfig04);
-            ScreenConfigMessages.Add(11, ScrConfig05);
-            ScreenConfigMessages.Add(12, ScrConfig04);
+            AssignScreenConfigMessages();
         }
 
         #region Getters
-        public List<byte> getConfig(int configNr)
+        public List<byte> getScreenConfig(int configNr)
         {
             List<byte> config = new();
             if (ScreenConfigMessages.ContainsKey(configNr))
@@ -77,9 +66,35 @@ namespace Nanni_ScreenConfigurator
             return config;
         }
 
+        public List<byte> getCustomSensor_StartingFrame()
+        {
+            return SensorTypeCustom_Message.GetRange(0, 3);
+        }
+
+        public List<byte> getCustomSensorMessage()
+        {
+            return SensorTypeCustom_Message;
+        }
         #endregion
 
         #region ScreenConfig_Definitions
+        private void AssignScreenConfigMessages()
+        {
+            // Assign the prepared configuration messages to the different configurations 
+            ScreenConfigMessages.Add( 1, ScrConfig01);
+            ScreenConfigMessages.Add( 2, ScrConfig02);
+            ScreenConfigMessages.Add( 3, ScrConfig01);
+            ScreenConfigMessages.Add( 4, ScrConfig04);
+            ScreenConfigMessages.Add( 5, ScrConfig05);
+            ScreenConfigMessages.Add( 6, ScrConfig04);
+            ScreenConfigMessages.Add( 7, ScrConfig01);
+            ScreenConfigMessages.Add( 8, ScrConfig02);
+            ScreenConfigMessages.Add( 9, ScrConfig01);
+            ScreenConfigMessages.Add(10, ScrConfig04);
+            ScreenConfigMessages.Add(11, ScrConfig05);
+            ScreenConfigMessages.Add(12, ScrConfig04);
+        }
+
         private readonly List<byte> ScrConfig01 = new()
         {
             0x02,   // scr1 - screen type: 2=bar
@@ -261,8 +276,6 @@ namespace Nanni_ScreenConfigurator
             0x26,  0x00,   0x00,   0x00,   0x00,   0x00,   0x00,   0x00,
             0x27,  0x00,   0x00,   0x00,   0x00,   0x00,   0x00
         };
-
-
         #endregion
 
         #region PinConfig_Definitions
@@ -314,6 +327,36 @@ namespace Nanni_ScreenConfigurator
                     break;
             }
         }
+
+        // Message for: Sensor-type = "CUSTOM"
+        private static List<byte> SensorTypeCustom_Message = new()
+        {
+            12, 0,0,
+            0x20, 0,0,0,0,0,0,0,
+            0x21, 12,0,0,0,0,0,0,
+            0x22, 0,0,0,0,0,0,0,//0,0,0,4,0,0,0,
+            0x23, 0,0,0,0,0,0,0,//0,0,0,0,0,0,4,
+            0x24, 0,0,0,0,0,0,0,
+            0x25, 0,0
+        };
         #endregion
+
+        #region BargraphConfigs
+        private readonly List<byte> BargraphSettings_12V_System = new()
+        {
+            0x10, 0x18, 0x2E, 0x01, 0x3C,
+            0x21, 0x00, 0x00, 0x00, 0x00, 0x0/*Oil Press - Low 1*/, 0x0/*Oil Press - Low 2*/, 0x01/*Oil Press - High 1*/,
+            0x22, 0xF4/*Oil Press - High 1*/, 0x0/*Eng Temp - low 1*/, 0x0/*Eng Temp - low 2*/, 0x0/*Eng Temp - High 1*/, 0x0/*Eng Temp - High 2*/, 0x0/*Bat Low 1*/, 0x0/*Bat Low 2*/,
+            0x23, 0x0/*Bat High 1*/, 0x0/*Bat High 2*/, 0x0, 0x0, 0x0, 0x0
+        };
+        private readonly List<byte> BargraphSettings_24V_System = new()
+        {
+            0x10, 0x18, 0x2E, 0x01, 0x3C,
+            0x21, 0x00, 0x00, 0x00, 0x00, 0x0/*Oil Press - Low 1*/, 0x0/*Oil Press - Low 2*/, 0x01/*Oil Press - High 1*/,
+            0x22, 0xF4/*Oil Press - High 1*/, 0x0/*Eng Temp - low 1*/, 0x0/*Eng Temp - low 2*/, 0x0/*Eng Temp - High 1*/, 0x0/*Eng Temp - High 2*/, 0x0/*Bat Low 1*/, 0x0/*Bat Low 2*/,
+            0x23, 0x0/*Bat High 1*/, 0x0/*Bat High 2*/, 0x0, 0x0, 0x0, 0x0
+        };
+        #endregion
+
     }
 }
