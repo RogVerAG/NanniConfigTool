@@ -7,6 +7,19 @@ using System.Threading.Tasks;
 
 namespace Nanni_ScreenConfigurator
 {
+    struct AlarmConfig
+    {
+        public float BatteryLowVal;
+        public float OilPressLowVal;
+        public float CoolantTempHighVal;
+
+        public AlarmConfig(float BatteryLowVal, float OilPressLowVal, float CoolantTempHighVal)
+        {
+            this.BatteryLowVal = BatteryLowVal;
+            this.OilPressLowVal = OilPressLowVal;
+            this.CoolantTempHighVal = CoolantTempHighVal;
+        }
+    }
     internal class NanniConfigurations
     {
         private const byte EngTwoOffset = 46;
@@ -396,6 +409,83 @@ namespace Nanni_ScreenConfigurator
             0x21,   0x64/*Eng Temp - High 1*/, 0x0/*Eng Temp - High 2*/, 0xF/*Bat Low 1*/, 0x0/*Bat Low 2*/,0x18/*Bat High 1*/, 0x0/*Bat High 2*/, 0x0,
             0x22,   0x0, 0x0, 0x0
         };
+        #endregion
+
+        #region AlarmConfigs
+        private readonly Dictionary<int, AlarmConfig> AlarmConfigs = new()
+        {
+            // 12V-System
+            {1, new AlarmConfig(11.5f, 1.0f, 75.0f) },  //Battery, OilPress, CoolantTemp
+            // 24V-System
+            {2, new AlarmConfig(18.0f, 1.0f, 75.0f) },
+            // System without alarms
+            {3, new AlarmConfig(-1f, -1f, -1f) }
+        };
+
+        public List<byte> getAlarmConfigVals(int configNr)
+        {
+            if(configNr == 1 || configNr == 4)
+            {
+                return AlarmConfig_to_MsgVals(AlarmConfigs[1]);    // 12V-Alarms
+            }
+            else if(configNr == 7 || configNr == 10)
+            {
+                return AlarmConfig_to_MsgVals(AlarmConfigs[2]);    // 24V-Alarms
+            }
+            else
+            {
+                return AlarmConfig_to_MsgVals(AlarmConfigs[3]);    // no-alarms
+            }
+        }
+
+        private List<byte> AlarmConfig_to_MsgVals(AlarmConfig config)
+        {
+            List<byte> MsgVals = new(); // Format On/Off-Byte / Value LSB / Value MSB
+                                        // Voltage First, then Press, then Temp
+
+            if (config.BatteryLowVal >= 0)
+            {
+                UInt16 tempVal = (UInt16)(config.BatteryLowVal * 100);
+                MsgVals.Add(0x05);
+                MsgVals.Add((byte)(tempVal & 0x00FF));
+                MsgVals.Add((byte)((tempVal & 0xFF00) >> 8));
+            }
+            else
+            {
+                MsgVals.Add(0);
+                MsgVals.Add(0);
+                MsgVals.Add(0);
+            }
+
+            if (config.OilPressLowVal >= 0)
+            {
+                UInt16 pressVal = (UInt16)(config.OilPressLowVal * 100);
+                MsgVals.Add(0x05);
+                MsgVals.Add((byte)(pressVal & 0x00FF));
+                MsgVals.Add((byte)((pressVal & 0xFF00) >> 8));
+            }
+            else
+            {
+                MsgVals.Add(0);
+                MsgVals.Add(0);
+                MsgVals.Add(0);
+            }
+
+            if (config.CoolantTempHighVal >= 0)
+            {
+                UInt16 tempVal = (UInt16)(config.CoolantTempHighVal * 10);
+                MsgVals.Add(0x05);
+                MsgVals.Add((byte)(tempVal & 0x00FF));
+                MsgVals.Add((byte)((tempVal & 0xFF00) >> 8));
+            }
+            else
+            {
+                MsgVals.Add(0);
+                MsgVals.Add(0);
+                MsgVals.Add(0);
+            }
+            return MsgVals;
+        }
         #endregion
     }
 }

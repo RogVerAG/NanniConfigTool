@@ -926,14 +926,22 @@ namespace Nanni_ScreenConfigurator
                     progressBar.PerformStep();
                     stopConfigSendingProcess(hardStop: false);
                     //Prepare for sending Pin Configurations too
-                    stopConfigSendingProcess(hardStop: true);
-                    changeStatusLabel(ProcessStates.SUCCESS);
+                    stopConfigSendingProcess(hardStop: false);
+                    sendAlarmConfigurations();
                     break;
 
                 default:
                     FailExitSendingProcess("Unexpected Status");
                     break;
             }
+        }
+
+        private void sendAlarmConfigurations()
+        {
+            can.SendAlarmConfigurations( ScreenConfigs.getAlarmConfigVals(CurrentConfigNr) );
+            progressBar.PerformStep();
+            stopConfigSendingProcess(hardStop: true);
+            changeStatusLabel(ProcessStates.SUCCESS);
         }
         #endregion
 

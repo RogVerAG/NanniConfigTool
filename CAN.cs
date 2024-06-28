@@ -484,6 +484,54 @@ namespace Nanni_ScreenConfigurator
             return true;
         }
 
+        public bool SendAlarmConfigurations(List<byte> AlarmDescription)
+        {
+            if (AlarmDescription.Count < 9)
+            {
+                return false;
+            }
+
+            byte[] data = new byte[8];
+            data[0] = 0xBB;
+            data[1] = 0x99;
+            data[2] = 0x14;
+            data[4] = 0x01;
+
+            // Voltage
+            data[3] = 0x3C;
+            data[5] = AlarmDescription[0];
+            data[6] = AlarmDescription[1];
+            data[7] = AlarmDescription[2];
+            canStatus status = CanlibAPI.canWrite(CanHandle, 0x00FF0100, data, 8, CanlibAPI.canMSG_EXT);
+            if (status != CanlibAPI.canStatus.canOK)
+            {
+                return false;
+            }
+
+            // Oil Pressure
+            data[3] = 0xD7;
+            data[5] = AlarmDescription[3];
+            data[6] = AlarmDescription[4];
+            data[7] = AlarmDescription[5];
+            status = CanlibAPI.canWrite(CanHandle, 0x00FF0100, data, 8, CanlibAPI.canMSG_EXT);
+            if (status != CanlibAPI.canStatus.canOK)
+            {
+                return false;
+            }
+
+            // Coolant Temp
+            data[3] = 0xDB;
+            data[5] = AlarmDescription[6];
+            data[6] = AlarmDescription[7];
+            data[7] = AlarmDescription[8];
+            status = CanlibAPI.canWrite(CanHandle, 0x00FF0100, data, 8, CanlibAPI.canMSG_EXT);
+            if (status != CanlibAPI.canStatus.canOK)
+            {
+                return false;
+            }
+            return true;
+        }
+
         public bool getFrameAnswer()
         {
             if (StartingFrameAnswer)
